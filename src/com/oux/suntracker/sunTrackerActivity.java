@@ -17,6 +17,9 @@
 package com.oux.suntracker;
 
 import android.app.Activity;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.content.Context;
@@ -25,6 +28,7 @@ import android.graphics.PixelFormat;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.Window;
+import android.view.View;
 import android.view.ViewGroup.LayoutParams; 
 import java.io.IOException;
 
@@ -56,7 +60,13 @@ public class sunTrackerActivity extends Activity {
         mGLSurfaceView.getHolder().setFormat(PixelFormat.TRANSLUCENT);
         // mGLSurfaceView.setRenderer(new CubeRenderer(false));
         mPreview = new Preview(this);
+		DrawOnTop mDraw = new DrawOnTop(this);
+
         setContentView(mPreview);
+		addContentView(mDraw, new LayoutParams
+				(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+
+
         // setContentView(mGLSurfaceView, new LayoutParams
         //             (LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
     }
@@ -80,10 +90,31 @@ public class sunTrackerActivity extends Activity {
     private GLSurfaceView mGLSurfaceView;
 }
 
+class DrawOnTop extends View {
+
+	public DrawOnTop(Context context) {
+		super(context);
+		// TODO Auto-generated constructor stub
+	}
+
+	@Override
+		protected void onDraw(Canvas canvas) {
+			// TODO Auto-generated method stub
+
+			Paint paint = new Paint();
+			paint.setStyle(Paint.Style.FILL);
+			paint.setColor(Color.BLACK);
+			canvas.drawText("Test Text", 10, 10, paint);
+
+			super.onDraw(canvas);
+		}
+
+}
+
 class Preview extends SurfaceView implements SurfaceHolder.Callback {
     SurfaceHolder mHolder;
     Camera mCamera;
-    
+
     Preview(Context context) {
         super(context);
         
