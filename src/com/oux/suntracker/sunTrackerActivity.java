@@ -82,8 +82,9 @@ public class sunTrackerActivity extends Activity {
 //				(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
 
 
-        // setContentView(mGLSurfaceView, new LayoutParams
+        // addContentView(mGLSurfaceView, new LayoutParams
         //             (LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+		// mGLSurfaceView.bringToFront(); 
     }
 
     @Override
@@ -113,6 +114,7 @@ public class sunTrackerActivity extends Activity {
 
 }
 
+@SuppressWarnings("deprecation")
 class DrawOnTop extends View implements SensorListener {
     private static final String TAG = "Sun Tracker View";
     private float   mLastValues[] = new float[3*2];
@@ -133,16 +135,24 @@ class DrawOnTop extends View implements SensorListener {
 
 
     public void onSensorChanged(int sensor, float[] values) {
-        // Log.d(TAG, "sensor: " + sensor + ", x: " + values[0] + ", y: " + values[1] + ", z: " + values[2]);
+        Log.d(TAG, "sensor swapped  : " + sensor + ", x: " + values[0] + ", y: " + values[1] + ", z: " + values[2]);
+        Log.d(TAG, "sensor unswapped: " + sensor + ", x: " + values[3] + ", y: " + values[4] + ", z: " + values[5]);
         synchronized (this) {
             if (mBitmap != null) {
                 final Canvas canvas = mCanvas;
                 final Paint paint = mPaint;
                 if (sensor == SensorManager.SENSOR_ORIENTATION) {
-                    for (int i=0 ; i<3 ; i++) {
-                        mOrientationValues[i] = values[i];
-                    }
-                } else {
+					// We have to use:
+					// SensorManager.getRotationMatrix(inR, i, values_acc, values_mag);
+					// remapCoordinateSystem(inR, AXIS_X, AXIS_Z, outR);
+					// SensorManager.getOrientation(outR, values);
+					// values[0] = (float) Math.toDegrees(values[0]);
+					// values[1] = (float) Math.toDegrees(values[1]);
+					// values[2] = (float) Math.toDegrees(values[2]);
+
+					mOrientationValues = values.clone();
+                }
+				/* else {
                     float deltaX = mSpeed;
                     float newX = mLastX + deltaX;
 
@@ -157,6 +167,7 @@ class DrawOnTop extends View implements SensorListener {
                     if (sensor == SensorManager.SENSOR_MAGNETIC_FIELD)
                         mLastX += mSpeed;
                 }
+				*/
                 invalidate();
             }
         }
@@ -199,80 +210,80 @@ class DrawOnTop extends View implements SensorListener {
 	@Override
 		protected void onDraw(Canvas canvas) {
 			Paint paint = new Paint();
-//			//paint.setStyle(Paint.Style.FILL);
+			//			//paint.setStyle(Paint.Style.FILL);
+			if (mBitmap != null) {
+				final Path path = mPath;
+				final int outer = 0xFFC0C0C0;
+				final int inner = 0xFFff7010;
+
+				if (mLastX >= mMaxX) {
+					mLastX = 0;
+					final Canvas cavas = mCanvas;
+					final float yoffset = mYOffset;
+					final float maxx = mMaxX;
+					final float oneG = SensorManager.STANDARD_GRAVITY * mScale[0];
+					paint.setColor(0xFFAAAAAA);
+					cavas.drawColor(0xFFFFFFFF);
+					cavas.drawLine(0, yoffset,      maxx, yoffset,      paint);
+					cavas.drawLine(0, yoffset+oneG, maxx, yoffset+oneG, paint);
+					cavas.drawLine(0, yoffset-oneG, maxx, yoffset-oneG, paint);
+				}
+
+				float[] values = mOrientationValues;
+				if (mWidth < mHeight) {
+					float w0 = mWidth * 0.333333f;
+					float w  = w0 - 32;
+					float x = w0*0.5f;
+					for (int i=0 ; i<3 ; i++) {
+						canvas.save(Canvas.MATRIX_SAVE_FLAG);
+						canvas.translate(x, w*0.5f + 4.0f);
+						canvas.save(Canvas.MATRIX_SAVE_FLAG);
+						paint.setColor(outer);
+						canvas.scale(w, w);
+						canvas.drawOval(mRect, paint);
+						canvas.restore();
+						canvas.scale(w-5, w-5);
+						paint.setColor(inner);
+						canvas.rotate(-values[i]);
+						canvas.drawPath(path, paint);
+						canvas.restore();
+						x += w0;
+					}
+				} else {
+					float h0 = mHeight * 0.333333f;
+					float h  = h0 - 32;
+					float y = h0*0.5f;
+					for (int i=0 ; i<3 ; i++) {
+						canvas.save(Canvas.MATRIX_SAVE_FLAG);
+						canvas.translate(mWidth - (h*0.5f + 4.0f), y);
+						canvas.save(Canvas.MATRIX_SAVE_FLAG);
+						paint.setColor(outer);
+						canvas.scale(h, h);
+						canvas.drawOval(mRect, paint);
+						canvas.restore();
+						canvas.scale(h-5, h-5);
+						paint.setColor(inner);
+						canvas.rotate(-values[i]);
+						canvas.drawPath(path, paint);
+						canvas.restore();
+						y += h0;
+					}
+				}
+
+			}
 			paint.setStyle(Paint.Style.STROKE);
 			paint.setColor(Color.RED);
-            paint.setTextSize(18);
-            paint.setStrokeWidth(2);
+			paint.setTextSize(18);
+			paint.setStrokeWidth(2);
 			canvas.drawText("Test Text", 20, 20, paint);
 			canvas.drawLine(this.getWidth() / 2, 0, this.getWidth() / 2, this.getHeight(), paint);
-            canvas.drawArc(new RectF(0,   0, 50, 30), 0, 30, false, paint);
-            canvas.drawArc(new RectF(0,  50, 50, 100), 90, 90, false, paint);
-            canvas.drawArc(new RectF(0, 100, 50, 130), 90, 180, false, paint);
-            canvas.drawArc(new RectF(0, 150, 50, 200), 180, 270, false, paint);
-            canvas.drawArc(new RectF(0, 200, 50, 230), 270, 0, false, paint);
-            canvas.drawArc(new RectF(0, 250, 50, 300), 120, 270, false, paint);
+			canvas.drawArc(new RectF(0,   0, 50, 30), 0, 30, false, paint);
+			canvas.drawArc(new RectF(0,  50, 50, 100), 90, 90, false, paint);
+			canvas.drawArc(new RectF(0, 100, 50, 130), 90, 180, false, paint);
+			canvas.drawArc(new RectF(0, 150, 50, 200), 180, 270, false, paint);
+			canvas.drawArc(new RectF(0, 200, 50, 230), 270, 0, false, paint);
+			canvas.drawArc(new RectF(0, 250, 50, 300), 120, 270, false, paint);
 
-                if (mBitmap != null) {
-                    final Path path = mPath;
-                    final int outer = 0xFFC0C0C0;
-                    final int inner = 0xFFff7010;
-
-                    if (mLastX >= mMaxX) {
-                        mLastX = 0;
-                        final Canvas cavas = mCanvas;
-                        final float yoffset = mYOffset;
-                        final float maxx = mMaxX;
-                        final float oneG = SensorManager.STANDARD_GRAVITY * mScale[0];
-                        paint.setColor(0xFFAAAAAA);
-                        cavas.drawColor(0xFFFFFFFF);
-                        cavas.drawLine(0, yoffset,      maxx, yoffset,      paint);
-                        cavas.drawLine(0, yoffset+oneG, maxx, yoffset+oneG, paint);
-                        cavas.drawLine(0, yoffset-oneG, maxx, yoffset-oneG, paint);
-                    }
-
-                    float[] values = mOrientationValues;
-                    if (mWidth < mHeight) {
-                        float w0 = mWidth * 0.333333f;
-                        float w  = w0 - 32;
-                        float x = w0*0.5f;
-                        for (int i=0 ; i<3 ; i++) {
-                            canvas.save(Canvas.MATRIX_SAVE_FLAG);
-                            canvas.translate(x, w*0.5f + 4.0f);
-                            canvas.save(Canvas.MATRIX_SAVE_FLAG);
-                            paint.setColor(outer);
-                            canvas.scale(w, w);
-                            canvas.drawOval(mRect, paint);
-                            canvas.restore();
-                            canvas.scale(w-5, w-5);
-                            paint.setColor(inner);
-                            canvas.rotate(-values[i]);
-                            canvas.drawPath(path, paint);
-                            canvas.restore();
-                            x += w0;
-                        }
-                    } else {
-                        float h0 = mHeight * 0.333333f;
-                        float h  = h0 - 32;
-                        float y = h0*0.5f;
-                        for (int i=0 ; i<3 ; i++) {
-                            canvas.save(Canvas.MATRIX_SAVE_FLAG);
-                            canvas.translate(mWidth - (h*0.5f + 4.0f), y);
-                            canvas.save(Canvas.MATRIX_SAVE_FLAG);
-                            paint.setColor(outer);
-                            canvas.scale(h, h);
-                            canvas.drawOval(mRect, paint);
-                            canvas.restore();
-                            canvas.scale(h-5, h-5);
-                            paint.setColor(inner);
-                            canvas.rotate(-values[i]);
-                            canvas.drawPath(path, paint);
-                            canvas.restore();
-                            y += h0;
-                        }
-                    }
-
-                }
 
 			super.onDraw(canvas);
 		}
