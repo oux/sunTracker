@@ -79,8 +79,7 @@ public class sunTrackerActivity extends Activity {
         setContentView(mDraw);
 //        setContentView(mPreview);
 //		addContentView(mDraw, new LayoutParams
-//				(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
-
+//                (LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
 
         // setContentView(mGLSurfaceView, new LayoutParams
         //             (LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
@@ -100,7 +99,7 @@ public class sunTrackerActivity extends Activity {
             mGLSurfaceView.onResume();
             mSensorManager.registerListener(mDraw,
                     SensorManager.SENSOR_ACCELEROMETER | 
-                    SensorManager.SENSOR_MAGNETIC_FIELD |
+                    SensorManager.Ss.getWidth() / 2,ENSOR_MAGNETIC_FIELD |
                     SensorManager.SENSOR_ORIENTATION,
                     SensorManager.SENSOR_DELAY_FASTEST);
         }
@@ -197,85 +196,105 @@ class DrawOnTop extends View implements SensorListener {
         }
 
 	@Override
-		protected void onDraw(Canvas canvas) {
-			Paint paint = new Paint();
-//			//paint.setStyle(Paint.Style.FILL);
-			paint.setStyle(Paint.Style.STROKE);
-			paint.setColor(Color.RED);
-            paint.setTextSize(18);
-            paint.setStrokeWidth(2);
-			canvas.drawText("Test Text", 20, 20, paint);
-			canvas.drawLine(this.getWidth() / 2, 0, this.getWidth() / 2, this.getHeight(), paint);
-            canvas.drawArc(new RectF(0,   0, 50, 30), 0, 30, false, paint);
-            canvas.drawArc(new RectF(0,  50, 50, 100), 90, 90, false, paint);
-            canvas.drawArc(new RectF(0, 100, 50, 130), 90, 180, false, paint);
-            canvas.drawArc(new RectF(0, 150, 50, 200), 180, 270, false, paint);
-            canvas.drawArc(new RectF(0, 200, 50, 230), 270, 0, false, paint);
-            canvas.drawArc(new RectF(0, 250, 50, 300), 120, 270, false, paint);
+        protected void onDraw(Canvas canvas) {
+            Paint paint = new Paint();
 
-                if (mBitmap != null) {
-                    final Path path = mPath;
-                    final int outer = 0xFFC0C0C0;
-                    final int inner = 0xFFff7010;
+            if (mBitmap != null) {
+                final Path path = mPath;
+                final int outer = 0xFFC0C0C0;
+                final int inner = 0xFFff7010;
 
-                    if (mLastX >= mMaxX) {
-                        mLastX = 0;
-                        final Canvas cavas = mCanvas;
-                        final float yoffset = mYOffset;
-                        final float maxx = mMaxX;
-                        final float oneG = SensorManager.STANDARD_GRAVITY * mScale[0];
-                        paint.setColor(0xFFAAAAAA);
-                        cavas.drawColor(0xFFFFFFFF);
-                        cavas.drawLine(0, yoffset,      maxx, yoffset,      paint);
-                        cavas.drawLine(0, yoffset+oneG, maxx, yoffset+oneG, paint);
-                        cavas.drawLine(0, yoffset-oneG, maxx, yoffset-oneG, paint);
-                    }
-
-                    float[] values = mOrientationValues;
-                    if (mWidth < mHeight) {
-                        float w0 = mWidth * 0.333333f;
-                        float w  = w0 - 32;
-                        float x = w0*0.5f;
-                        for (int i=0 ; i<3 ; i++) {
-                            canvas.save(Canvas.MATRIX_SAVE_FLAG);
-                            canvas.translate(x, w*0.5f + 4.0f);
-                            canvas.save(Canvas.MATRIX_SAVE_FLAG);
-                            paint.setColor(outer);
-                            canvas.scale(w, w);
-                            canvas.drawOval(mRect, paint);
-                            canvas.restore();
-                            canvas.scale(w-5, w-5);
-                            paint.setColor(inner);
-                            canvas.rotate(-values[i]);
-                            canvas.drawPath(path, paint);
-                            canvas.restore();
-                            x += w0;
-                        }
-                    } else {
-                        float h0 = mHeight * 0.333333f;
-                        float h  = h0 - 32;
-                        float y = h0*0.5f;
-                        for (int i=0 ; i<3 ; i++) {
-                            canvas.save(Canvas.MATRIX_SAVE_FLAG);
-                            canvas.translate(mWidth - (h*0.5f + 4.0f), y);
-                            canvas.save(Canvas.MATRIX_SAVE_FLAG);
-                            paint.setColor(outer);
-                            canvas.scale(h, h);
-                            canvas.drawOval(mRect, paint);
-                            canvas.restore();
-                            canvas.scale(h-5, h-5);
-                            paint.setColor(inner);
-                            canvas.rotate(-values[i]);
-                            canvas.drawPath(path, paint);
-                            canvas.restore();
-                            y += h0;
-                        }
-                    }
-
+                if (mLastX >= mMaxX) {
+                    mLastX = 0;
+                    final Canvas cavas = mCanvas;
+                    final float yoffset = mYOffset;
+                    final float maxx = mMaxX;
+                    final float oneG = SensorManager.STANDARD_GRAVITY * mScale[0];
+                    paint.setColor(0xFFAAAAAA);
+                    cavas.drawColor(0xFFFFFFFF);
+                    cavas.drawLine(0, yoffset,      maxx, yoffset,      paint);
+                    cavas.drawLine(0, yoffset+oneG, maxx, yoffset+oneG, paint);
+                    cavas.drawLine(0, yoffset-oneG, maxx, yoffset-oneG, paint);
                 }
 
-			super.onDraw(canvas);
-		}
+                float[] values = mOrientationValues;
+                if (mWidth < mHeight) {
+                    // 1/3 de l'écran
+                    float w0 = mWidth * 0.333333f;
+                    // un peu moins d'1/3 de l'écran
+                    float w  = w0 - 32;
+                    //  la moitier du 1/3
+                    float x = w0*0.5f;
+                    for (int i=2 ; i<3 ; i++) {
+
+                        canvas.save(Canvas.MATRIX_SAVE_FLAG);
+                        // x = w0/2 + n * w0
+                        canvas.translate(x, w*0.5f + 4.0f);
+                        
+                        canvas.save(Canvas.MATRIX_SAVE_FLAG);
+                        paint.setColor(outer);
+                        canvas.scale(w, w);
+                        canvas.drawOval(mRect, paint);
+                        canvas.restore();
+                        
+                        canvas.scale(w-5, w-5);
+                        paint.setColor(inner);
+                        canvas.rotate(-values[i]);
+                        canvas.drawPath(path, paint);
+                        
+                        canvas.restore();
+                        x += w0;
+                    }
+                } else {
+                    float h0 = mHeight * 0.333333f;
+                    float h  = h0 - 32;
+                    float y = h0*0.5f;
+                    for (int i=0 ; i<3 ; i++) {
+                        canvas.save(Canvas.MATRIX_SAVE_FLAG);
+                        canvas.translate(mWidth - (h*0.5f + 4.0f), y);
+                        canvas.save(Canvas.MATRIX_SAVE_FLAG);
+                        paint.setColor(outer);
+                        canvas.scale(h, h);
+                        canvas.drawOval(mRect, paint);
+                        canvas.restore();
+                        canvas.scale(h-5, h-5);
+                        paint.setColor(inner);
+                        canvas.rotate(-values[i]);
+                        canvas.drawPath(path, paint);
+                        canvas.restore();
+                        y += h0;
+                    }
+                }
+                //paint.setStyle(Paint.Style.FILL);
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setColor(Color.RED);
+                paint.setTextSize(18);
+                paint.setStrokeWidth(2);
+//                canvas.drawText("X: " + mOrientationValues[1], 20, 40, paint);
+//                canvas.drawText("Y: " + mOrientationValues[2], 20, 60, paint);
+                canvas.save(Canvas.MATRIX_SAVE_FLAG);
+                canvas.translate(this.getWidth() / 2,this.getHeight() / 2);
+                canvas.drawText("Z: " + mOrientationValues[0], 20, 20, paint);
+                canvas.drawText("Z: " + values[0], 0, 0, paint);
+                canvas.rotate(-values[2]);
+                canvas.drawLine(0, -this.getHeight(), 0, this.getHeight(), paint);
+                canvas.restore();
+//                canvas.save(Canvas.MATRIX_SAVE_FLAG);
+//                for (int i =10; i > 360; i+=10) {
+//                    canvas.rotate(-i);
+//                    canvas.drawText("Z: " + i, 150, 150, paint);
+//                }
+//                canvas.restore();
+//                canvas.drawArc(new RectF(0,   0, 50, 30), 0, 30, false, paint);
+//                canvas.drawArc(new RectF(0,  50, 50, 100), 90, 90, false, paint);
+//                canvas.drawArc(new RectF(0, 100, 50, 130), 90, 180, false, paint);
+//                canvas.drawArc(new RectF(0, 150, 50, 200), 180, 270, false, paint);
+//                canvas.drawArc(new RectF(0, 200, 50, 230), 270, 0, false, paint);
+//                canvas.drawArc(new RectF(0, 250, 50, 300), 120, 270, false, paint);
+            }
+
+            super.onDraw(canvas);
+        }
 
     public void onAccuracyChanged(int sensor, int accuracy) {
         // TODO Auto-generated method stub
@@ -322,6 +341,7 @@ class Preview extends SurfaceView implements SurfaceHolder.Callback {
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
         // Now that the size is known, set up the camera parameters and begin
         // the preview.
+        // Log.d("Matrix:" + Camera.getMatrix());
         Camera.Parameters parameters = mCamera.getParameters();
         parameters.setPreviewSize(w, h);
         mCamera.setParameters(parameters);
