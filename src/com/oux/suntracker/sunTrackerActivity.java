@@ -38,6 +38,8 @@ import android.view.View;
 import android.view.ViewGroup.LayoutParams; 
 import java.io.IOException;
 import android.util.Log;
+import java.util.Calendar;
+import android.util.FloatMath;
 
 /**
  * Wrapper activity demonstrating the use of {@link GLSurfaceView}, a view
@@ -76,13 +78,17 @@ public class sunTrackerActivity extends Activity {
         mPreview = new Preview(this);
 		mDraw = new DrawOnTop(this);
 
+        // To draw only draws
         setContentView(mDraw);
+
+        // To draw draws + camera
 //        setContentView(mPreview);
 //		addContentView(mDraw, new LayoutParams
 //                (LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
 
-        // setContentView(mGLSurfaceView, new LayoutParams
+        // addContentView(mGLSurfaceView, new LayoutParams
         //             (LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+		// mGLSurfaceView.bringToFront(); 
     }
 
     @Override
@@ -99,7 +105,7 @@ public class sunTrackerActivity extends Activity {
             mGLSurfaceView.onResume();
             mSensorManager.registerListener(mDraw,
                     SensorManager.SENSOR_ACCELEROMETER | 
-                    SensorManager.Ss.getWidth() / 2,ENSOR_MAGNETIC_FIELD |
+                    SensorManager.SENSOR_MAGNETIC_FIELD |
                     SensorManager.SENSOR_ORIENTATION,
                     SensorManager.SENSOR_DELAY_FASTEST);
         }
@@ -112,10 +118,17 @@ public class sunTrackerActivity extends Activity {
 
 }
 
+@SuppressWarnings("deprecation")
 class DrawOnTop extends View implements SensorListener {
     private static final String TAG = "Sun Tracker View";
     private float   mLastValues[] = new float[3*2];
-    private float   mOrientationValues[] = new float[3];
+    private final int matrix_size = 16;
+    private float   mOrientationValues[] = new float[matrix_size];
+    private float   outR[]= new float[matrix_size];
+    private float   inR[]= new float[matrix_size];
+    private float   i[]= new float[matrix_size];
+    private float   values_acc[]= new float[matrix_size];
+    private float   values_mag[]= new float[matrix_size];
     private int     mColors[] = new int[3*2];
     private Path    mPath = new Path();
     private RectF   mRect = new RectF();
@@ -132,16 +145,29 @@ class DrawOnTop extends View implements SensorListener {
 
 
     public void onSensorChanged(int sensor, float[] values) {
-        // Log.d(TAG, "sensor: " + sensor + ", x: " + values[0] + ", y: " + values[1] + ", z: " + values[2]);
+        // Log.d(TAG, "sensor swapped  : " + sensor + ", x: " + values[0] + ", y: " + values[1] + ", z: " + values[2]);
+        // Log.d(TAG, "sensor unswapped: " + sensor + ", x: " + values[3] + ", y: " + values[4] + ", z: " + values[5]);
         synchronized (this) {
             if (mBitmap != null) {
                 final Canvas canvas = mCanvas;
                 final Paint paint = mPaint;
                 if (sensor == SensorManager.SENSOR_ORIENTATION) {
-                    for (int i=0 ; i<3 ; i++) {
-                        mOrientationValues[i] = values[i];
-                    }
-                } else {
+					// We have to use:
+//					SensorManager.getRotationMatrix(inR, i, values_acc, values_mag);
+//                  SensorManager.remapCoordinateSystem(inR, SensorManager.AXIS_X, SensorManager.AXIS_Z, outR);
+//					SensorManager.getOrientation(outR, values);
+//					SensorManager.getOrientation(inR, values);
+					mOrientationValues = values.clone();
+//					mOrientationValues[0] = (float) Math.toDegrees(values[0]);
+//					mOrientationValues[1] = (float) Math.toDegrees(values[1]);
+//					mOrientationValues[2] = (float) Math.toDegrees(values[2]);
+//                    Log.d(TAG, "sensor swapped  : " + sensor + ", x: " + values[0] + ", y: " + values[1] + ", z: " + values[2]);
+//                    Log.d(TAG, "sensor unswapped: " + sensor + ", x: " + values[3] + ", y: " + values[4] + ", z: " + values[5]);
+//                    Log.d(TAG, "sensor swapped  : " + sensor + ", x: " + mOrientationValues[0] + ", y: " + mOrientationValues[1] + ", z: " + mOrientationValues[2]);
+                    // Log.d(TAG, "sensor unswapped: " + sensor + ", x: " + mOrientationValues[3] + ", y: " + mOrientationValues[4] + ", z: " + mOrientationValues[5]);
+
+                }
+				/* else {
                     float deltaX = mSpeed;
                     float newX = mLastX + deltaX;
 
@@ -156,6 +182,7 @@ class DrawOnTop extends View implements SensorListener {
                     if (sensor == SensorManager.SENSOR_MAGNETIC_FIELD)
                         mLastX += mSpeed;
                 }
+				*/
                 invalidate();
             }
         }
@@ -219,11 +246,11 @@ class DrawOnTop extends View implements SensorListener {
 
                 float[] values = mOrientationValues;
                 if (mWidth < mHeight) {
-                    // 1/3 de l'écran
+                    // 1/3 of screen
                     float w0 = mWidth * 0.333333f;
-                    // un peu moins d'1/3 de l'écran
+                    // less then 1/3 of screen
                     float w  = w0 - 32;
-                    //  la moitier du 1/3
+                    //  la half of 1/3
                     float x = w0*0.5f;
                     for (int i=2 ; i<3 ; i++) {
 
@@ -239,7 +266,7 @@ class DrawOnTop extends View implements SensorListener {
                         
                         canvas.scale(w-5, w-5);
                         paint.setColor(inner);
-                        canvas.rotate(-values[i]);
+                        canvas.rotate(-values[i+3]);
                         canvas.drawPath(path, paint);
                         
                         canvas.restore();
@@ -259,7 +286,7 @@ class DrawOnTop extends View implements SensorListener {
                         canvas.restore();
                         canvas.scale(h-5, h-5);
                         paint.setColor(inner);
-                        canvas.rotate(-values[i]);
+                        canvas.rotate(-values[i+3]);
                         canvas.drawPath(path, paint);
                         canvas.restore();
                         y += h0;
@@ -274,8 +301,24 @@ class DrawOnTop extends View implements SensorListener {
 //                canvas.drawText("Y: " + mOrientationValues[2], 20, 60, paint);
                 canvas.save(Canvas.MATRIX_SAVE_FLAG);
                 canvas.translate(this.getWidth() / 2,this.getHeight() / 2);
-                canvas.drawText("Z: " + mOrientationValues[0], 20, 20, paint);
-                canvas.drawText("Z: " + values[0], 0, 0, paint);
+                canvas.drawText("Z: " + mOrientationValues[2], 10, 20, paint);
+                canvas.drawText("Z: " + values[5], 10, 0, paint);
+                Calendar date = Calendar.getInstance();
+                int day_number = date.get(Calendar.DAY_OF_YEAR);
+                // http://engnet.anu.edu.au/DEpeople/Andres.Cuevas/Sun/help/SPguide.html
+                int fi=45; // to dynamise
+                int omega=45; // to dynamise
+                float delta = (float)23.45 * FloatMath.sin ((float)((day_number - 81) * 2 * Math.PI / 365));
+                float alfa = (float)Math.asin(FloatMath.sin(delta) * FloatMath.sin(fi) + FloatMath.cos(delta) * FloatMath.cos(fi) * FloatMath.cos(omega));
+                float psi  = (float)Math.PI - (float)Math.acos((FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)) / FloatMath.cos (alfa));
+                for (int i=1; i <10; i++)
+                {
+                    omega=i;
+                    alfa = (float)Math.asin(FloatMath.sin(delta) * FloatMath.sin(fi) + FloatMath.cos(delta) * FloatMath.cos(fi) * FloatMath.cos(omega));
+                    psi  = (float)Math.PI - (float)Math.acos((FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)) / FloatMath.cos (alfa));
+                    canvas.drawPoint(psi%320-160,(int)alfa%480-240,paint);
+                    canvas.drawText("Sun alfa: " + alfa+ ", psi: "+psi, -100, i*20-240, paint);
+                }
                 canvas.rotate(-values[2]);
                 canvas.drawLine(0, -this.getHeight(), 0, this.getHeight(), paint);
                 canvas.restore();
@@ -285,14 +328,13 @@ class DrawOnTop extends View implements SensorListener {
 //                    canvas.drawText("Z: " + i, 150, 150, paint);
 //                }
 //                canvas.restore();
-//                canvas.drawArc(new RectF(0,   0, 50, 30), 0, 30, false, paint);
+                canvas.drawOval(new RectF(0,   0, 50, 30), paint);
 //                canvas.drawArc(new RectF(0,  50, 50, 100), 90, 90, false, paint);
 //                canvas.drawArc(new RectF(0, 100, 50, 130), 90, 180, false, paint);
 //                canvas.drawArc(new RectF(0, 150, 50, 200), 180, 270, false, paint);
 //                canvas.drawArc(new RectF(0, 200, 50, 230), 270, 0, false, paint);
 //                canvas.drawArc(new RectF(0, 250, 50, 300), 120, 270, false, paint);
             }
-
             super.onDraw(canvas);
         }
 
