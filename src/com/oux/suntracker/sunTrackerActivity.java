@@ -301,24 +301,61 @@ class DrawOnTop extends View implements SensorListener {
 //                canvas.drawText("Y: " + mOrientationValues[2], 20, 60, paint);
                 canvas.save(Canvas.MATRIX_SAVE_FLAG);
                 canvas.translate(this.getWidth() / 2,this.getHeight() / 2);
-                canvas.drawText("Z: " + mOrientationValues[2], 10, 20, paint);
-                canvas.drawText("Z: " + values[5], 10, 0, paint);
+                // canvas.drawText("Z: " + mOrientationValues[2], 10, 20, paint);
+                // canvas.drawText("Z: " + values[5], 10, 0, paint);
                 Calendar date = Calendar.getInstance();
                 int day_number = date.get(Calendar.DAY_OF_YEAR);
                 // http://engnet.anu.edu.au/DEpeople/Andres.Cuevas/Sun/help/SPguide.html
-                int fi=45; // to dynamise
-                int omega=45; // to dynamise
-                float delta = (float)23.45 * FloatMath.sin ((float)((day_number - 81) * 2 * Math.PI / 365));
-                float alfa = (float)Math.asin(FloatMath.sin(delta) * FloatMath.sin(fi) + FloatMath.cos(delta) * FloatMath.cos(fi) * FloatMath.cos(omega));
-                float psi  = (float)Math.PI - (float)Math.acos((FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)) / FloatMath.cos (alfa));
-                for (int i=1; i <10; i++)
+                float fi=(float)Math.PI/4; // to dynamise
+                float omega=45; // to dynamise
+                float delta = (float)(Math.PI * ((float)23.45 * FloatMath.sin ((float)((day_number - 81) * 2 * Math.PI / 365)))/180);
+                float alfa;
+                float psi;
+                /* Show different hours: */
+                for (int hour=0; hour <24; hour++)
                 {
-                    omega=i;
+                    canvas.drawText("Hour: " + hour, -200, hour*20-200, paint);
+                    if (hour< 8) {
+                        paint.setColor(Color.rgb(hour*10+160,0,0));
+                    }else if (hour <16) {
+                        paint.setColor(Color.rgb(0,hour%8*10+160,0));
+                    }else {
+                        paint.setColor(Color.rgb(0,0,hour%8*10+160));
+                    }
+                    omega= (float)( Math.PI*2 * hour / 24);
                     alfa = (float)Math.asin(FloatMath.sin(delta) * FloatMath.sin(fi) + FloatMath.cos(delta) * FloatMath.cos(fi) * FloatMath.cos(omega));
-                    psi  = (float)Math.PI - (float)Math.acos((FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)) / FloatMath.cos (alfa));
-                    canvas.drawPoint(psi%320-160,(int)alfa%480-240,paint);
-                    canvas.drawText("Sun alfa: " + alfa+ ", psi: "+psi, -100, i*20-240, paint);
+                    psi  = (float)Math.PI - (float)Math.acos(
+                            (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
+                            ) / FloatMath.cos (alfa));
+                    canvas.drawPoint(-60+psi*70,-50+alfa*70,paint);
+                    // canvas.drawText("Sun alfa: " + alfa+ ", psi: "+psi, -100, i*20-240, paint);
                 }
+                /* Show different seasons: */
+                /*
+                for (day_number=1; day_number < 365 ; day_number=day_number+30)
+                {
+                    canvas.drawText("Day: " + day_number, -200, day_number*2/3-200, paint);
+                    if (day_number< 120) {
+                        paint.setColor(Color.rgb(day_number%120+120,0,0));
+                    }else if (day_number <240) {
+                        paint.setColor(Color.rgb(0,day_number%120+120,0));
+                    }else {
+                        paint.setColor(Color.rgb(0,0,day_number%120+120));
+                    }
+                    delta = (float)(Math.PI * ((float)23.45 * FloatMath.sin ((float)((day_number - 81) * 2 * Math.PI / 365))) / 180);
+                    for (int hour=0; hour <24; hour++)
+                    {
+                        omega=(float)( Math.PI*2*hour / 24);
+                        alfa = (float)Math.asin(FloatMath.sin(delta) * FloatMath.sin(fi) + FloatMath.cos(delta) * FloatMath.cos(fi) * FloatMath.cos(omega));
+                        psi  = (float)Math.PI - (float)Math.acos(
+                                (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
+                                 ) / FloatMath.cos (alfa));
+                        canvas.drawPoint(-60+psi*70,-50+alfa*70,paint);
+                        // canvas.drawText("Sun alfa: " + alfa+ ", psi: "+psi, -100, i*20-240, paint);
+                    }
+                }
+                */
+                paint.setColor(0xFFCCCCCC);
                 canvas.rotate(-values[2]);
                 canvas.drawLine(0, -this.getHeight(), 0, this.getHeight(), paint);
                 canvas.restore();

@@ -8,7 +8,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
 
-    <application android:label="@string/app_name">
+    <application android:label="@string/app_name"
+            android:icon="@drawable/icon">
         <activity android:name=".sunTrackerActivity"
             android:label="@string/app_name">
             <intent-filter>
