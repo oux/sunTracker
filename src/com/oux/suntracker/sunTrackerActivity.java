@@ -297,11 +297,11 @@ class DrawOnTop extends View implements SensorListener {
                 paint.setColor(Color.RED);
                 paint.setTextSize(18);
                 paint.setStrokeWidth(2);
-//                canvas.drawText("X: " + mOrientationValues[1], 20, 40, paint);
-//                canvas.drawText("Y: " + mOrientationValues[2], 20, 60, paint);
                 canvas.save(Canvas.MATRIX_SAVE_FLAG);
                 canvas.translate(this.getWidth() / 2,this.getHeight() / 2);
-                // canvas.drawText("Z: " + mOrientationValues[2], 10, 20, paint);
+                canvas.drawText("X: " + mOrientationValues[1], 0, 20, paint);
+                canvas.drawText("Y: " + mOrientationValues[2], 0, 40, paint);
+                canvas.drawText("Z: " + mOrientationValues[3], 0, 60, paint);
                 // canvas.drawText("Z: " + values[5], 10, 0, paint);
                 Calendar date = Calendar.getInstance();
                 int day_number = date.get(Calendar.DAY_OF_YEAR);
@@ -312,22 +312,32 @@ class DrawOnTop extends View implements SensorListener {
                 float alfa;
                 float psi;
                 /* Show different hours: */
-                for (int hour=0; hour <24; hour++)
+                canvas.rotate(-values[2]);
+                int graduation=24*2;
+                int angle_view_x=50;
+                for (int hour=0; hour <graduation; hour++)
                 {
-                    canvas.drawText("Hour: " + hour, -200, hour*20-200, paint);
-                    if (hour< 8) {
-                        paint.setColor(Color.rgb(hour*10+160,0,0));
-                    }else if (hour <16) {
-                        paint.setColor(Color.rgb(0,hour%8*10+160,0));
+                    if (hour < graduation/3) {
+                        paint.setColor(Color.rgb(100*hour/(graduation/3)+150,0,0));
+                    }else if (hour < graduation*2/3) {
+                        paint.setColor(Color.rgb(0,100*hour%(graduation/3)/(graduation/3)+150,0));
                     }else {
-                        paint.setColor(Color.rgb(0,0,hour%8*10+160));
+                        paint.setColor(Color.rgb(0,0,100*hour%(graduation/3)/(graduation/3)+150));
                     }
-                    omega= (float)( Math.PI*2 * hour / 24);
+                    omega= (float)( Math.PI * 2 * hour / graduation);
                     alfa = (float)Math.asin(FloatMath.sin(delta) * FloatMath.sin(fi) + FloatMath.cos(delta) * FloatMath.cos(fi) * FloatMath.cos(omega));
-                    psi  = (float)Math.PI - (float)Math.acos(
+                    if (omega < Math.PI)
+                        psi = (float)Math.PI - (float)Math.acos(
                             (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
-                            ) / FloatMath.cos (alfa));
-                    canvas.drawPoint(-60+psi*70,-50+alfa*70,paint);
+                            ) / FloatMath.cos (alfa)
+                            );
+                    else
+                        psi = (float)Math.PI + (float)Math.acos(
+                            (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
+                            ) / FloatMath.cos (alfa)
+                           );
+                    canvas.drawPoint((180*psi/(float)Math.PI)-mOrientationValues[3],(180*alfa/(float)Math.PI)-mOrientationValues[1],paint);
+                    // canvas.drawText("Hour: " + hour, -200, hour*20-200, paint);
                     // canvas.drawText("Sun alfa: " + alfa+ ", psi: "+psi, -100, i*20-240, paint);
                 }
                 /* Show different seasons: */
@@ -356,7 +366,6 @@ class DrawOnTop extends View implements SensorListener {
                 }
                 */
                 paint.setColor(0xFFCCCCCC);
-                canvas.rotate(-values[2]);
                 canvas.drawLine(0, -this.getHeight(), 0, this.getHeight(), paint);
                 canvas.restore();
 //                canvas.save(Canvas.MATRIX_SAVE_FLAG);
