@@ -159,7 +159,10 @@ class DrawOnTop extends View implements SensorListener {
     int graduation=24*2;
     int angle_view_x=50;
     int pointed_hour=0;
+    float[] sunrise_points = new float[365];
+    float[] sunset_points = new float[365];
     float[] hours_points = new float[graduation*4];
+    float[] hours_points_display = new float[graduation*4];
     // private float   direction;
     public static volatile float direction = (float) 0;
     public static volatile float rolling = (float) 0;
@@ -230,6 +233,7 @@ class DrawOnTop extends View implements SensorListener {
 
 	public DrawOnTop(Context context) {
 		super(context);
+        // Log.v(TAG,"DrawOnTop...");
         mColors[0] = Color.argb(192, 255, 64, 64);
         mColors[1] = Color.argb(192, 64, 128, 64);
         mColors[2] = Color.argb(192, 64, 64, 255);
@@ -242,13 +246,53 @@ class DrawOnTop extends View implements SensorListener {
         mPath.arcTo(mRect, 0, 180);
         // Initialisation regarding the localisation.
         Calendar date = Calendar.getInstance();
-        date.set(2010,6,21,0,0,0);
+        // date.set(2010,6,21,0,0,0);
+        // date.set(2010,12,21,0,0,0);
         day_number = date.get(Calendar.DAY_OF_YEAR);
         // http://engnet.anu.edu.au/DEpeople/Andres.Cuevas/Sun/help/SPguide.html
         fi=deg_to_rad((float)43.49); // to dynamise
-        fi=(float)Math.PI / 4;
-        delta = deg_to_rad((float)23.45 * FloatMath.sin ((float)((day_number - 81) * 2*(float)Math.PI / 365)));
+        // fi=(float)Math.PI / 4;
+        delta = deg_to_rad((float)23.45 * FloatMath.sin ((float)((day_number + 254) * 2*(float)Math.PI / 365)));
+        // delta = deg_to_rad((float)23.45 * FloatMath.sin ((float)((day_number - 81) * 2*(float)Math.PI / 365)));
         omega_s = rad_to_deg((float)Math.acos(-(float)Math.tan(fi) * (float)Math.tan(delta)));
+        for (int hour=0; hour < graduation; hour++)
+        {
+            omega= (float)( (Math.PI * 2 * hour / graduation) - Math.PI);
+            // omega= (float)( (Math.PI * 2 * hour / graduation) + Math.PI);
+            alfa = (float)Math.asin(FloatMath.sin(delta) * FloatMath.sin(fi) + FloatMath.cos(delta) * FloatMath.cos(fi) * FloatMath.cos(omega));
+            psi = 0;
+            if (omega < 0) {
+                psi = (float)Math.acos(
+                    (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
+                    ) / FloatMath.cos (alfa)
+                    );
+            } else {
+                psi = 2 * (float)Math.PI -(float)Math.acos(
+                    (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
+                    ) / FloatMath.cos (alfa)
+                   );
+            }
+            if (hour == 0){
+                hours_points[hour*4]=rad_to_deg(psi);
+                hours_points[hour*4+1]=-rad_to_deg(alfa);
+            } else if (hour == graduation - 1) {
+                hours_points[hour*4-2]=rad_to_deg(psi);
+                hours_points[hour*4-1]=-rad_to_deg(alfa);
+            } else {
+                hours_points[hour*4-2]=rad_to_deg(psi);
+                hours_points[hour*4-1]=-rad_to_deg(alfa);
+                hours_points[hour*4]=rad_to_deg(psi);
+                hours_points[hour*4+1]=-rad_to_deg(alfa);
+            }
+            // Log.v(TAG,"hours_points["+hour*4+"]="+hours_points[hour*4]+","+hours_points[hour+1]);
+        }
+        for (int i=1; i < 365 ; i++)
+        {
+            delta_0 = deg_to_rad((float)23.45 * FloatMath.sin ((float)((i - 81) * 2*(float)Math.PI / 365)));
+            omega_s_0 = rad_to_deg((float)Math.acos(-(float)Math.tan(fi) * (float)Math.tan(delta_0)));
+            sunrise_points[i]=180+omega_s_0;
+            sunset_points[i]=180-omega_s_0;
+        }
 	}
 
         @Override
@@ -353,58 +397,33 @@ class DrawOnTop extends View implements SensorListener {
                 // canvas.drawText("Z: " + mOrientationValues[3] + " Inclination: "+inclination, -100, 140, paint);
                 // canvas.drawText("Z: " + values[5], 10, 0, paint);
                 canvas.rotate(-rolling);
-                for (int i=1; i < 360 ; i++)
+                for (int i=1; i < 365 ; i++)
                 {
-                    delta_0 = deg_to_rad((float)23.45 * FloatMath.sin ((float)((i - 81) * 2*(float)Math.PI / 365)));
-                    omega_s_0 = rad_to_deg((float)Math.acos(-(float)Math.tan(fi) * (float)Math.tan(delta_0)));
                     paint.setColor(0xFFFFFF00);
-                    canvas.drawPoint(180+omega_s_0-inclination,i-150,paint);
-                    canvas.drawPoint(180-omega_s_0-inclination,i-150,paint);
+                    canvas.drawPoint(sunrise_points[i]-inclination,i-150,paint);
+                    canvas.drawPoint(sunset_points[i]-inclination,i-150,paint);
                 }
-                for (int hour=0; hour < graduation; hour++)
+                pointed_hour=0;
+                for (int hour=0; hour < graduation*4; hour+=2)
                 {
-                    omega= (float)( Math.PI * 2 * hour / graduation);
-                    alfa = (float)Math.asin(FloatMath.sin(delta) * FloatMath.sin(fi) + FloatMath.cos(delta) * FloatMath.cos(fi) * FloatMath.cos(omega));
-                    psi = 0;
-                    if (omega < Math.PI) {
-                        psi = (float)Math.PI - (float)Math.acos(
-                            (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
-                            ) / FloatMath.cos (alfa)
-                            );
-                    } else {
-                        psi = (float)Math.PI + (float)Math.acos(
-                            (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
-                            ) / FloatMath.cos (alfa)
-                           );
+                    hours_points_display[hour]=hours_points[hour]-inclination;
+                }
+                for (int hour=1; hour < graduation*4; hour+=2)
+                {
+                    hours_points_display[hour]=hours_points[hour]-direction;
+                }
+                for (int hour=0; hour < graduation*4; hour+=4)
+                {
+                    if ((hours_points_display[hour] < (360 / graduation) && hours_points_display[hour] > 0) || 
+                            (-hours_points_display[hour] < (360 / graduation) && hours_points_display[hour] < 0)) {
+                        pointed_hour=hour/4;
                     }
-                    if (hour == 0){
-                        hours_points[hour*4]=rad_to_deg(psi)-inclination;
-                        hours_points[hour*4+1]=rad_to_deg(alfa)-direction;
-                    } else if (hour == graduation - 1) {
-                        hours_points[hour*4-2]=rad_to_deg(psi)-inclination;
-                        hours_points[hour*4-1]=rad_to_deg(alfa)-direction;
-                        break;
-                    } else {
-                        hours_points[hour*4-2]=rad_to_deg(psi)-inclination;
-                        hours_points[hour*4-1]=rad_to_deg(alfa)-direction;
-                        hours_points[hour*4]=rad_to_deg(psi)-inclination;
-                        hours_points[hour*4+1]=rad_to_deg(alfa)-direction;
-                    }
-                    if (rad_to_deg(psi)-inclination < (360 / graduation)) {
-                        pointed_hour=hour;
-                        pointed_alfa=alfa;
-                        pointed_psi=psi;
-                    }
-
-                    //canvas.drawPoint((180*psi/(float)Math.PI)-inclination,(180*alfa/(float)Math.PI)-direction,paint);
-                    // canvas.drawText("Hour: " + hour, -200, hour*20-200, paint);
-                    // canvas.drawText("Sun alfa: " + alfa+ ", psi: "+psi, -100, i*20-240, paint);
                 }
                 paint.setColor(Color.GREEN);
                 paint.setStrokeWidth(2);
-                canvas.drawLines(hours_points,paint);
+                canvas.drawLines(hours_points_display,paint);
                 paint.setColor(0xFFFF0000);
-                canvas.drawText("Hour: " + (float)((float)24 * pointed_hour / (float)graduation), 10, hours_points[pointed_hour*4+1], paint);
+                canvas.drawText("Hour: " + (float)((float)24 * pointed_hour / (float)graduation), 10, hours_points_display[pointed_hour*4+1], paint);
                 // canvas.drawText("omega_s: "+ omega_s, 10, hours_points[pointed_hour*4+1]+20, paint);
                 // canvas.drawText("psi: "+ pointed_psi, 10, hours_points[pointed_hour*4+1]+40, paint);
                 // canvas.drawText("alfa: "+ pointed_alfa, 10, hours_points[pointed_hour*4+1]+60, paint);
@@ -416,31 +435,34 @@ class DrawOnTop extends View implements SensorListener {
                 /* Show different seasons: */
                 for (int day=1; day < 365 ; day=day+30)
                 {
-                    if (day< 120) {
+                    if (day< 122) {
                         paint.setColor(Color.rgb(day%120+120,0,0));
-                    }else if (day <240) {
+                    }else if (day <242) {
                         paint.setColor(Color.rgb(0,day%120+120,0));
                     }else {
                         paint.setColor(Color.rgb(0,0,day%120+120));
                     }
-                    delta_y = deg_to_rad((float)23.45 * FloatMath.sin ((float)((day - 81) * 2 * (float)Math.PI / 365)));
+                    // delta_y = deg_to_rad((float)23.45 * FloatMath.sin ((float)((day - 81) * 2 * (float)Math.PI / 365)));
+                    delta_y = deg_to_rad((float)23.45 * FloatMath.sin ((float)((day + 254) * 2 * (float)Math.PI / 365)));
                     for (int hour=0; hour <24; hour++)
                     {
                         omega=(float)( Math.PI*2*hour / 24);
-                        // A regarder pourquoi les saisons sont inversées
+                        // TODO:A regarder pourquoi les saisons sont inversees
                         alfa = (float)Math.asin(FloatMath.sin(delta_y) * FloatMath.sin(fi) + FloatMath.cos(delta_y) * FloatMath.cos(fi) * FloatMath.cos(omega));
                         if (omega < Math.PI) {
-                            psi  = (float)Math.PI - (float)Math.acos(
+                            // First part of the day
+                            psi  = 2*(float)Math.PI - (float)Math.acos(
                                 (FloatMath.cos(fi) * FloatMath.sin(delta_y) - FloatMath.cos(delta_y) * FloatMath.sin(fi) * FloatMath.cos(omega)
                                  ) / FloatMath.cos (alfa));
                         } else {
-                            psi  = (float)Math.PI + (float)Math.acos(
+                            // second part of the day
+                            psi  = (float)Math.acos(
                                 (FloatMath.cos(fi) * FloatMath.sin(delta_y) - FloatMath.cos(delta_y) * FloatMath.sin(fi) * FloatMath.cos(omega)
                                  ) / FloatMath.cos (alfa));
                         }
                         canvas.drawPoint(
                             rad_to_deg(psi)-inclination+day/50,
-                            rad_to_deg(alfa)-direction,
+                            -rad_to_deg(alfa)-direction,
                             paint);
                     }
                 }
