@@ -21,6 +21,10 @@ import android.graphics.RectF;
 import android.hardware.SensorManager;
 import android.hardware.SensorListener;
 import android.app.Activity;
+import android.app.Dialog;
+import android.app.DatePickerDialog.OnDateSetListener;
+import android.widget.DatePicker;
+import android.app.DatePickerDialog;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -33,6 +37,8 @@ import android.hardware.Camera;
 import android.graphics.PixelFormat;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.Window;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams; 
@@ -48,10 +54,14 @@ import android.util.FloatMath;
 public class sunTrackerActivity extends Activity {
     private Preview mPreview;
     private SensorManager mSensorManager;
-	private	DrawOnTop mDraw;
+    private	DrawOnTop mDraw;
     private GLSurfaceView mGLSurfaceView;
     private static final String TAG = "Sun Tracker Activity";
-
+    private static final int CHANGE_DATE_ID = Menu.FIRST;
+    private Calendar date;
+    private int mYear;
+    private int mMonth;
+    private int mDay;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,6 +86,10 @@ public class sunTrackerActivity extends Activity {
         mGLSurfaceView.getHolder().setFormat(PixelFormat.TRANSLUCENT);
         // mGLSurfaceView.setRenderer(new CubeRenderer(false));
         mPreview = new Preview(this);
+        date = Calendar.getInstance();
+        mYear=date.get(Calendar.YEAR);
+        mMonth=date.get(Calendar.MONTH);
+        mDay=date.get(Calendar.DAY_OF_MONTH);
 		mDraw = new DrawOnTop(this);
 
         // To draw only draws
@@ -114,6 +128,59 @@ public class sunTrackerActivity extends Activity {
         protected void onStop() {
             mSensorManager.unregisterListener(mDraw);
             super.onStop();
+        }
+
+    @Override
+        public boolean onCreateOptionsMenu(Menu menu) {
+            super.onCreateOptionsMenu(menu);
+            // Entrees du menu:
+            // * Change date
+            // * maj data
+            // * select city
+            // * favoris (mais ca peut peut etre etre sur a long touch overlayitem
+            menu.add(0, CHANGE_DATE_ID, 0, R.string.menu_change_date);
+            // menu.add(0, REFRESH_ID, 0, R.string.menu_refresh);
+            // menu.add(0, UPDATEDB_ID, 0, R.string.menu_updatedb);
+            // menu.add(0, DISP_FAVS_ID, 0, "Favs");
+            return true;
+        }
+
+    // the callback received when the user "sets" the date in the dialog
+    private DatePickerDialog.OnDateSetListener mDateSetListener =
+        new DatePickerDialog.OnDateSetListener() {
+
+            public void onDateSet(DatePicker view, int year, 
+                    int monthOfYear, int dayOfMonth) {
+                date = Calendar.getInstance();
+                date.set(year,monthOfYear,dayOfMonth,0,0,0);
+                mDraw.changeDate(date);
+                mDraw.setWillNotDraw(false);
+            }
+        };
+
+    @Override
+        protected Dialog onCreateDialog(int id) {
+            switch (id) {
+                case CHANGE_DATE_ID:
+                    return new DatePickerDialog(this,
+                            mDateSetListener, mYear, mMonth, mDay);
+            }
+            return null;
+        }
+
+    @Override
+        public boolean onOptionsItemSelected(MenuItem item) {
+            // Handle all of the possible menu actions.
+            switch (item.getItemId()) {
+                case CHANGE_DATE_ID:
+                    mDraw.setWillNotDraw(true);
+                    mYear=date.get(Calendar.YEAR);
+                    mMonth=date.get(Calendar.MONTH);
+                    mDay=date.get(Calendar.DAY_OF_MONTH);
+                    showDialog(CHANGE_DATE_ID);
+                    break;
+            }
+            return super.onOptionsItemSelected(item);
         }
 
 }
@@ -169,6 +236,52 @@ class DrawOnTop extends View implements SensorListener {
     public static volatile float inclination = (float) 0;
     public static volatile float kFilteringFactor = (float)0.05;
 
+    public void changeDate() {
+        Calendar date = Calendar.getInstance();
+        changeDate(date);
+    }
+
+    public void changeDate(Calendar date) {
+        // Initialisation regarding the localisation.
+        day_number = date.get(Calendar.DAY_OF_YEAR);
+        // http://engnet.anu.edu.au/DEpeople/Andres.Cuevas/Sun/help/SPguide.html
+        fi=deg_to_rad((float)43.49); // to dynamise
+        // fi=(float)Math.PI / 4;
+        // delta = deg_to_rad((float)23.45 * FloatMath.sin ((float)((day_number + 254) * 2*(float)Math.PI / 365)));
+        delta = deg_to_rad((float)23.45 * FloatMath.sin ((float)((day_number - 81) * 2*(float)Math.PI / 365)));
+        omega_s = rad_to_deg((float)Math.acos(-(float)Math.tan(fi) * (float)Math.tan(delta)));
+        for (int hour=0; hour < graduation; hour++)
+        {
+            omega= (float)( (Math.PI * 2 * hour / graduation) - Math.PI);
+            // omega= (float)( (Math.PI * 2 * hour / graduation) + Math.PI);
+            alfa = (float)Math.asin(FloatMath.sin(delta) * FloatMath.sin(fi) + FloatMath.cos(delta) * FloatMath.cos(fi) * FloatMath.cos(omega));
+            psi = 0;
+            if (omega < 0) {
+                psi = (float)Math.acos(
+                    (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
+                    ) / FloatMath.cos (alfa)
+                    );
+            } else {
+                psi = 2 * (float)Math.PI -(float)Math.acos(
+                    (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
+                    ) / FloatMath.cos (alfa)
+                   );
+            }
+            if (hour == 0){
+                hours_points[hour*4]=rad_to_deg(psi);
+                hours_points[hour*4+1]=-rad_to_deg(alfa);
+            } else if (hour == graduation - 1) {
+                hours_points[hour*4-2]=rad_to_deg(psi);
+                hours_points[hour*4-1]=-rad_to_deg(alfa);
+            } else {
+                hours_points[hour*4-2]=rad_to_deg(psi);
+                hours_points[hour*4-1]=-rad_to_deg(alfa);
+                hours_points[hour*4]=rad_to_deg(psi);
+                hours_points[hour*4+1]=-rad_to_deg(alfa);
+            }
+            // Log.v(TAG,"hours_points["+hour*4+"]="+hours_points[hour*4]+","+hours_points[hour+1]);
+        }
+    }
 
     private float rad_to_deg(float rad) {
         return (180*rad/(float)Math.PI);
@@ -244,48 +357,7 @@ class DrawOnTop extends View implements SensorListener {
         mPaint.setFlags(Paint.ANTI_ALIAS_FLAG);
         mRect.set(-0.5f, -0.5f, 0.5f, 0.5f);
         mPath.arcTo(mRect, 0, 180);
-        // Initialisation regarding the localisation.
-        Calendar date = Calendar.getInstance();
-        // date.set(2010,6,21,0,0,0);
-        // date.set(2010,12,21,0,0,0);
-        day_number = date.get(Calendar.DAY_OF_YEAR);
-        // http://engnet.anu.edu.au/DEpeople/Andres.Cuevas/Sun/help/SPguide.html
-        fi=deg_to_rad((float)43.49); // to dynamise
-        // fi=(float)Math.PI / 4;
-        delta = deg_to_rad((float)23.45 * FloatMath.sin ((float)((day_number + 254) * 2*(float)Math.PI / 365)));
-        // delta = deg_to_rad((float)23.45 * FloatMath.sin ((float)((day_number - 81) * 2*(float)Math.PI / 365)));
-        omega_s = rad_to_deg((float)Math.acos(-(float)Math.tan(fi) * (float)Math.tan(delta)));
-        for (int hour=0; hour < graduation; hour++)
-        {
-            omega= (float)( (Math.PI * 2 * hour / graduation) - Math.PI);
-            // omega= (float)( (Math.PI * 2 * hour / graduation) + Math.PI);
-            alfa = (float)Math.asin(FloatMath.sin(delta) * FloatMath.sin(fi) + FloatMath.cos(delta) * FloatMath.cos(fi) * FloatMath.cos(omega));
-            psi = 0;
-            if (omega < 0) {
-                psi = (float)Math.acos(
-                    (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
-                    ) / FloatMath.cos (alfa)
-                    );
-            } else {
-                psi = 2 * (float)Math.PI -(float)Math.acos(
-                    (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
-                    ) / FloatMath.cos (alfa)
-                   );
-            }
-            if (hour == 0){
-                hours_points[hour*4]=rad_to_deg(psi);
-                hours_points[hour*4+1]=-rad_to_deg(alfa);
-            } else if (hour == graduation - 1) {
-                hours_points[hour*4-2]=rad_to_deg(psi);
-                hours_points[hour*4-1]=-rad_to_deg(alfa);
-            } else {
-                hours_points[hour*4-2]=rad_to_deg(psi);
-                hours_points[hour*4-1]=-rad_to_deg(alfa);
-                hours_points[hour*4]=rad_to_deg(psi);
-                hours_points[hour*4+1]=-rad_to_deg(alfa);
-            }
-            // Log.v(TAG,"hours_points["+hour*4+"]="+hours_points[hour*4]+","+hours_points[hour+1]);
-        }
+        changeDate();
         for (int i=1; i < 365 ; i++)
         {
             delta_0 = deg_to_rad((float)23.45 * FloatMath.sin ((float)((i - 81) * 2*(float)Math.PI / 365)));
