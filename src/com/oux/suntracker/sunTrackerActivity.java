@@ -20,6 +20,8 @@ import android.graphics.Canvas;
 import android.graphics.RectF;
 import android.hardware.SensorManager;
 import android.hardware.SensorListener;
+import android.hardware.Camera.Parameters;
+import android.content.res.Configuration;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.DatePickerDialog.OnDateSetListener;
@@ -93,12 +95,12 @@ public class sunTrackerActivity extends Activity {
 		mDraw = new DrawOnTop(this);
 
         // To draw only draws
-        setContentView(mDraw);
+//        setContentView(mDraw);
 
         // To draw draws + camera
-//        setContentView(mPreview);
-//		addContentView(mDraw, new LayoutParams
-//                (LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+        setContentView(mPreview);
+		addContentView(mDraw, new LayoutParams
+                (LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
 
         // addContentView(mGLSurfaceView, new LayoutParams
         //             (LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
@@ -490,8 +492,7 @@ class DrawOnTop extends View implements SensorListener {
                 }
                 for (int hour=0; hour < graduation*4; hour+=4)
                 {
-                    if ((hours_points_display[hour] < (360 / graduation) && hours_points_display[hour] > 0) || 
-                            (-hours_points_display[hour] < (360 / graduation) && hours_points_display[hour] < 0)) {
+                    if (Math.abs(hours_points_display[hour]) < (2*Math.PI*radius_x / graduation) ) {
                         pointed_hour=hour/4;
                     }
                 }
@@ -609,9 +610,16 @@ class Preview extends SurfaceView implements SurfaceHolder.Callback {
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
         // Now that the size is known, set up the camera parameters and begin
         // the preview.
-        // Log.d("Matrix:" + Camera.getMatrix());
+        // Log.v("Matrix:" + Camera.getMatrix());
         Camera.Parameters parameters = mCamera.getParameters();
         parameters.setPreviewSize(w, h);
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT)
+        {
+            parameters.setPreviewSize(h, w);
+            parameters.set("rotation", 90);
+            parameters.set("orientation", "portrait");
+        }
+        //Log.v(TAG,"Camera (after):" + parameters.flatten());
         mCamera.setParameters(parameters);
         mCamera.startPreview();
     }
