@@ -244,8 +244,8 @@ class DrawOnTop extends View implements SensorListener {
 	public DrawOnTop(Context context) {
 		super(context);
         // Log.v(TAG,"DrawOnTop...");
-        this.radius_x=1; // this.getWidth();// this.getWidth();
-        this.radius_y=1; // this.getHeight();// th.tHeight();
+        this.radius_x=200; //this.getWidth();
+        this.radius_y=200; // this.getHeight();
         mColors[0] = Color.argb(192, 255, 64, 64);
         mColors[1] = Color.argb(192, 64, 128, 64);
         mColors[2] = Color.argb(192, 64, 64, 255);
@@ -309,12 +309,12 @@ class DrawOnTop extends View implements SensorListener {
     }
 
     private float translate_x(float angle) {
-        return (float)(Math.toDegrees(angle)*radius_x);
+        return (float)((angle)*radius_x);
         // return (float)(Math.tan(angle)*radius_x);
     }
 
     private float translate_y(float angle) {
-        return (float)(Math.toDegrees(angle+Math.PI/2)*radius_y);
+        return (float)((angle+Math.PI/2)*radius_y);
         // return (float)(Math.tan(angle)*radius_y);
     }
 
@@ -503,11 +503,11 @@ class DrawOnTop extends View implements SensorListener {
                 // canvas.drawText("omega_s: "+ omega_s, 10, hours_points[pointed_hour*4+1]+20, paint);
                 // canvas.drawText("psi: "+ pointed_psi, 10, hours_points[pointed_hour*4+1]+40, paint);
                 // canvas.drawText("alfa: "+ pointed_alfa, 10, hours_points[pointed_hour*4+1]+60, paint);
-                canvas.drawLine(translate_x((float)(omega_s-Math.toRadians(inclination))), -this.getHeight(),
-                        translate_x((float)(omega_s-Math.toRadians(inclination))), this.getHeight(), paint);
+                canvas.drawLine(translate_x((float)(Math.PI+omega_s-Math.toRadians(inclination))), -this.getHeight(),
+                        translate_x((float)(Math.PI+omega_s-Math.toRadians(inclination))), this.getHeight(), paint);
                 paint.setColor(0xFF0000FF);
-                canvas.drawLine(translate_x((float)(-omega_s-Math.toRadians(inclination))), -this.getHeight(),
-                        translate_x((float)(-omega_s-Math.toRadians(inclination))), this.getHeight(), paint);
+                canvas.drawLine(translate_x((float)(Math.PI-omega_s-Math.toRadians(inclination))), -this.getHeight(),
+                        translate_x((float)(Math.PI-omega_s-Math.toRadians(inclination))), this.getHeight(), paint);
                 /* Show different seasons: */
                 for (int day=1; day < 365 ; day=day+30)
                 {
