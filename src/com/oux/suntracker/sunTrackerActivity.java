@@ -18,8 +18,10 @@ package com.oux.suntracker;
 
 import android.graphics.Canvas;
 import android.graphics.RectF;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.hardware.SensorListener;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Size;
@@ -131,10 +133,11 @@ public class sunTrackerActivity extends Activity {
             cameraCurrentlyLocked = defaultCameraId;
             mPreview.setCamera(mCamera);
             mSensorManager.registerListener(mDraw,
-                    SensorManager.SENSOR_ACCELEROMETER | 
-                    SensorManager.SENSOR_MAGNETIC_FIELD |
-                    SensorManager.SENSOR_ORIENTATION,
-                    SensorManager.SENSOR_DELAY_FASTEST);
+                mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD),
+                SensorManager.SENSOR_DELAY_UI);
+            mSensorManager.registerListener(mDraw, 
+                mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+                SensorManager.SENSOR_DELAY_UI);
         }
 
     @Override 
@@ -199,16 +202,11 @@ public class sunTrackerActivity extends Activity {
 }
 
 @SuppressWarnings("deprecation")
-class DrawOnTop extends View implements SensorListener {
+class DrawOnTop extends View implements SensorEventListener {
     private static final String TAG = "Sun Tracker View";
     private float   mLastValues[] = new float[3*2];
     private final int matrix_size = 16;
-    private float   mOrientationValues[] = new float[matrix_size];
-    private float   outR[]= new float[matrix_size];
-    private float   inR[]= new float[matrix_size];
-    private float   i[]= new float[matrix_size];
-    private float   values_acc[]= new float[matrix_size];
-    private float   values_mag[]= new float[matrix_size];
+    private float   mOrientationValues[] = new float[3];
     private int     mColors[] = new int[3*2];
     private Path    mPath = new Path();
     private RectF   mRect = new RectF();
@@ -248,6 +246,8 @@ class DrawOnTop extends View implements SensorListener {
     public static volatile float rolling = (float) 0;
     public static volatile float inclination = (float) 0;
     public static volatile float kFilteringFactor = (float)0.05;
+    private float[] _accelerometerValues   = null;  //Valeur de l'accéléromètre
+    private float[] _magneticValues          = null;  //Valeurs du champ magnétique
 
     public void changeDate() {
         Calendar date = Calendar.getInstance();
@@ -327,57 +327,41 @@ class DrawOnTop extends View implements SensorListener {
     }
 
     private float translate_y(float angle) {
-        return (float)((angle+Math.PI/2)*radius_y);
+        return (float)((angle)*radius_y);
         // return (float)(Math.tan(angle)*radius_y);
     }
 
-    public void onSensorChanged(int sensor, float[] values) {
-        // Log.d(TAG, "sensor swapped  : " + sensor + ", x: " + values[0] + ", y: " + values[1] + ", z: " + values[2]);
-        // Log.d(TAG, "sensor unswapped: " + sensor + ", x: " + values[3] + ", y: " + values[4] + ", z: " + values[5]);
+    public void onSensorChanged(SensorEvent event) {
         synchronized (this) {
             if (mBitmap != null) {
                 final Canvas canvas = mCanvas;
                 final Paint paint = mPaint;
-                if (sensor == SensorManager.SENSOR_ORIENTATION) {
-					// We have to use:
-//					SensorManager.getRotationMatrix(inR, i, values_acc, values_mag);
-//                  SensorManager.remapCoordinateSystem(inR, SensorManager.AXIS_X, SensorManager.AXIS_Z, outR);
-//					SensorManager.getOrientation(outR, values);
-//					SensorManager.getOrientation(inR, values);
-					mOrientationValues = values.clone();
-                    direction = (float) ((mOrientationValues[1] * kFilteringFactor) + 
-                            (direction * (1.0 - kFilteringFactor)));
+                //Récupération des valeurs
+                if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
+                    _accelerometerValues = event.values.clone();
+                if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD)
+                    _magneticValues = event.values.clone();
 
-                    rolling = (float) ((mOrientationValues[2] * kFilteringFactor) + 
-                            (rolling * (1.0 - kFilteringFactor)));
-
-                    inclination = (float) ((mOrientationValues[3] * kFilteringFactor) + 
-                            (inclination * (1.0 - kFilteringFactor)));
-//					mOrientationValues[0] = (float) Math.toDegrees(values[0]);
-//					mOrientationValues[1] = (float) Math.toDegrees(values[1]);
-//					mOrientationValues[2] = (float) Math.toDegrees(values[2]);
-//                    Log.d(TAG, "sensor swapped  : " + sensor + ", x: " + values[0] + ", y: " + values[1] + ", z: " + values[2]);
-//                    Log.d(TAG, "sensor unswapped: " + sensor + ", x: " + values[3] + ", y: " + values[4] + ", z: " + values[5]);
-//                    Log.d(TAG, "sensor swapped  : " + sensor + ", x: " + mOrientationValues[0] + ", y: " + mOrientationValues[1] + ", z: " + mOrientationValues[2]);
-                    // Log.d(TAG, "sensor unswapped: " + sensor + ", x: " + mOrientationValues[3] + ", y: " + mOrientationValues[4] + ", z: " + mOrientationValues[5]);
-
-                }
-				/* else {
-                    float deltaX = mSpeed;
-                    float newX = mLastX + deltaX;
-
-                    int j = (sensor == SensorManager.SENSOR_MAGNETIC_FIELD) ? 1 : 0;
-                    for (int i=0 ; i<3 ; i++) {
-                        int k = i+j*3;
-                        final float v = mYOffset + values[i] * mScale[j];
-                        paint.setColor(mColors[k]);
-                        canvas.drawLine(mLastX, mLastValues[k], newX, v, paint);
-                        mLastValues[k] = v;
+                if (_accelerometerValues != null && _magneticValues != null)
+                {
+                    // http://blogah.arvyoo.com/2011/02/android-obtenir-les-valeurs-dinclinaisons-du-smartphone/
+                    float inR[] = new float[9]; //Notre matrice de rotation
+                    float outR[] = new float[9]; //Notre matrice de rotation dans un autre système de coordonnée
+                    float I[] = new float[9];
+                    if (SensorManager.getRotationMatrix(inR, I, _accelerometerValues, _magneticValues)
+                            && SensorManager.remapCoordinateSystem(inR, SensorManager.AXIS_X, SensorManager.AXIS_Z, outR))
+                    {
+                        float orientation[] = new float[3];
+                        orientation = SensorManager.getOrientation(outR, orientation);
+                        //Transformation en degrées
+                        direction = (float) ((orientation[0] * kFilteringFactor) + 
+                                (direction * (1.0 - kFilteringFactor)));
+                        inclination = (float) ((orientation[1] * kFilteringFactor) + 
+                                (inclination * (1.0 - kFilteringFactor)));
+                        rolling = (float) ((orientation[2] * kFilteringFactor) + 
+                                (rolling * (1.0 - kFilteringFactor)));
                     }
-                    if (sensor == SensorManager.SENSOR_MAGNETIC_FIELD)
-                        mLastX += mSpeed;
                 }
-				*/
                 invalidate();
             }
         }
@@ -479,27 +463,26 @@ class DrawOnTop extends View implements SensorListener {
                 paint.setColor(Color.RED);
                 paint.setTextSize(18);
                 paint.setStrokeWidth(2);
+//                canvas.drawText("Direction: " + (float)(direction), 10, 20, paint);
+//                canvas.drawText("Inclination: " + (float)(inclination), 10, 40, paint);
+//                canvas.drawText("Rolling: " + (float)(rolling), 10, 60, paint);
                 canvas.save(Canvas.MATRIX_SAVE_FLAG);
                 canvas.translate(this.getWidth() / 2,this.getHeight() / 2);
-                // canvas.drawText("X: " + mOrientationValues[1] + " Direction: "+direction, -100, 100, paint);
-                // canvas.drawText("Y: " + mOrientationValues[2], -100, 120, paint);
-                // canvas.drawText("Z: " + inclination + " Inclination: "+ Math.toRadians(inclination), -100, 140, paint);
-                // canvas.drawText("Z: " + values[5], 10, 0, paint);
-                canvas.rotate(-rolling);
+                canvas.rotate(-(float)Math.toDegrees(rolling));
                 for (int i=1; i < 365 ; i++)
                 {
                     paint.setColor(0xFFFFFF00);
-                    canvas.drawPoint(translate_x((float)(sunrise_points[i]-Math.toRadians(inclination))),i-150,paint);
-                    canvas.drawPoint(translate_x((float)(sunset_points[i]-Math.toRadians(inclination))),i-150,paint);
+                    canvas.drawPoint(i-150,translate_x((float)(sunrise_points[i]-direction)),paint);
+                    canvas.drawPoint(i-150,translate_x((float)(sunset_points[i]-direction)),paint);
                 }
                 pointed_hour=0;
                 for (int hour=0; hour < graduation*4; hour+=2)
                 {
-                    hours_points_display[hour]=translate_x((float)(hours_points[hour]-Math.toRadians(inclination)));
+                    hours_points_display[hour]=translate_x((float)(hours_points[hour]-direction));
                 }
                 for (int hour=1; hour < graduation*4; hour+=2)
                 {
-                    hours_points_display[hour]=-translate_y((float)(hours_points[hour]+Math.toRadians(direction)));
+                    hours_points_display[hour]=-translate_y((float)(hours_points[hour]+inclination));
                 }
                 for (int hour=0; hour < graduation*4; hour+=4)
                 {
@@ -515,11 +498,11 @@ class DrawOnTop extends View implements SensorListener {
                 // canvas.drawText("omega_s: "+ omega_s, 10, hours_points[pointed_hour*4+1]+20, paint);
                 // canvas.drawText("psi: "+ pointed_psi, 10, hours_points[pointed_hour*4+1]+40, paint);
                 // canvas.drawText("alfa: "+ pointed_alfa, 10, hours_points[pointed_hour*4+1]+60, paint);
-                canvas.drawLine(translate_x((float)(Math.PI+omega_s-Math.toRadians(inclination))), -this.getHeight(),
-                        translate_x((float)(Math.PI+omega_s-Math.toRadians(inclination))), this.getHeight(), paint);
+                canvas.drawLine(translate_x((float)(Math.PI+omega_s-direction)), -this.getHeight(),
+                        translate_x((float)(Math.PI+omega_s-direction)), this.getHeight(), paint);
                 paint.setColor(0xFF0000FF);
-                canvas.drawLine(translate_x((float)(Math.PI-omega_s-Math.toRadians(inclination))), -this.getHeight(),
-                        translate_x((float)(Math.PI-omega_s-Math.toRadians(inclination))), this.getHeight(), paint);
+                canvas.drawLine(translate_x((float)(Math.PI-omega_s-direction)), -this.getHeight(),
+                        translate_x((float)(Math.PI-omega_s-direction)), this.getHeight(), paint);
                 /* Show different seasons: */
                 for (int day=1; day < 365 ; day=day+30)
                 {
@@ -549,15 +532,15 @@ class DrawOnTop extends View implements SensorListener {
                                  ) / FloatMath.cos (alfa));
                         }
                         canvas.drawPoint(
-                            translate_x((float)(psi-Math.toRadians(inclination))),
-                            -translate_y((float)(alfa+Math.toRadians(direction))),
+                            translate_x((float)(psi-inclination)),
+                            -translate_y((float)(alfa+direction)),
                             paint);
                     }
                 }
                 paint.setColor(0xFFCCCCCC);
                 // Vertical line in the center of screen (to target)
                 canvas.drawLine(0, -this.getHeight(), 0, this.getHeight(), paint);
-                canvas.drawLine(-this.getWidth(), -translate_y((float)(Math.toRadians(direction))), this.getWidth(), -translate_y((float)(Math.toRadians(direction))), paint);
+                canvas.drawLine(-this.getWidth(), -translate_y(direction), this.getWidth(), -translate_y(direction), paint);
 // canvas.drawText("delta: "+ delta, 10, hours_points[pointed_hour*4+1]+20, paint);
                 canvas.restore();
 //                canvas.save(Canvas.MATRIX_SAVE_FLAG);
@@ -576,7 +559,7 @@ class DrawOnTop extends View implements SensorListener {
             super.onDraw(canvas);
         }
 
-    public void onAccuracyChanged(int sensor, int accuracy) {
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
         // TODO Auto-generated method stub
     }
 }
