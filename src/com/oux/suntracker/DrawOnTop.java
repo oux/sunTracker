@@ -10,6 +10,10 @@ import android.view.View;
 import android.content.Context;
 import java.util.Calendar;
 import android.util.FloatMath;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.hardware.Sensor;
 
 class DrawOnTop extends View implements SensorEventListener {
     private static final String TAG = "Sun Tracker View";
@@ -272,17 +276,17 @@ class DrawOnTop extends View implements SensorEventListener {
                 paint.setColor(Color.RED);
                 paint.setTextSize(18);
                 paint.setStrokeWidth(2);
-//                canvas.drawText("Direction: " + (float)(direction), 10, 20, paint);
-//                canvas.drawText("Inclination: " + (float)(inclination), 10, 40, paint);
-//                canvas.drawText("Rolling: " + (float)(rolling), 10, 60, paint);
+                canvas.drawText("Direction: " + (float)(direction), 10, 20, paint);
+                canvas.drawText("Inclination: " + (float)(inclination), 10, 40, paint);
+                canvas.drawText("Rolling: " + (float)(rolling), 10, 60, paint);
                 canvas.save(Canvas.MATRIX_SAVE_FLAG);
                 canvas.translate(this.getWidth() / 2,this.getHeight() / 2);
-                canvas.rotate(-(float)Math.toDegrees(rolling));
+                canvas.rotate(-(float)Math.toDegrees(rolling) - 90);
                 for (int i=1; i < 365 ; i++)
                 {
                     paint.setColor(0xFFFFFF00);
-                    canvas.drawPoint(i-150,translate_x((float)(sunrise_points[i]-direction)),paint);
-                    canvas.drawPoint(i-150,translate_x((float)(sunset_points[i]-direction)),paint);
+                    canvas.drawPoint(translate_x((float)(sunrise_points[i]-direction)),i-150,paint);
+                    canvas.drawPoint(translate_x((float)(sunset_points[i]-direction)),i-150,paint);
                 }
                 pointed_hour=0;
                 for (int hour=0; hour < graduation*4; hour+=2)
@@ -303,15 +307,17 @@ class DrawOnTop extends View implements SensorEventListener {
                 paint.setStrokeWidth(2);
                 canvas.drawLines(hours_points_display,paint);
                 paint.setColor(0xFFFF0000);
-                canvas.drawText("Hour: " + (float)((float)24 * pointed_hour / (float)graduation), 10, hours_points_display[pointed_hour*4+1], paint);
+                canvas.drawText("Hour: " + (float)((float)24 * pointed_hour / (float)graduation), 20, hours_points_display[pointed_hour*4+1], paint);
                 // canvas.drawText("omega_s: "+ omega_s, 10, hours_points[pointed_hour*4+1]+20, paint);
                 // canvas.drawText("psi: "+ pointed_psi, 10, hours_points[pointed_hour*4+1]+40, paint);
                 // canvas.drawText("alfa: "+ pointed_alfa, 10, hours_points[pointed_hour*4+1]+60, paint);
+                /*
                 canvas.drawLine(translate_x((float)(Math.PI+omega_s-direction)), -this.getHeight(),
                         translate_x((float)(Math.PI+omega_s-direction)), this.getHeight(), paint);
                 paint.setColor(0xFF0000FF);
                 canvas.drawLine(translate_x((float)(Math.PI-omega_s-direction)), -this.getHeight(),
                         translate_x((float)(Math.PI-omega_s-direction)), this.getHeight(), paint);
+                */
                 /* Show different seasons: */
                 for (int day=1; day < 365 ; day=day+30)
                 {
@@ -340,16 +346,18 @@ class DrawOnTop extends View implements SensorEventListener {
                                 (FloatMath.cos(fi) * FloatMath.sin(delta_y) - FloatMath.cos(delta_y) * FloatMath.sin(fi) * FloatMath.cos(omega)
                                  ) / FloatMath.cos (alfa));
                         }
+                        /*
                         canvas.drawPoint(
-                            translate_x((float)(psi-inclination)),
-                            -translate_y((float)(alfa+direction)),
+                            translate_x((float)(psi-direction)),
+                            -translate_y((float)(alfa+inclination)),
                             paint);
+                            */
                     }
                 }
                 paint.setColor(0xFFCCCCCC);
                 // Vertical line in the center of screen (to target)
                 canvas.drawLine(0, -this.getHeight(), 0, this.getHeight(), paint);
-                canvas.drawLine(-this.getWidth(), -translate_y(direction), this.getWidth(), -translate_y(direction), paint);
+                canvas.drawLine(-this.getWidth(), -translate_y(inclination), this.getWidth(), -translate_y(inclination), paint);
 // canvas.drawText("delta: "+ delta, 10, hours_points[pointed_hour*4+1]+20, paint);
                 canvas.restore();
 //                canvas.save(Canvas.MATRIX_SAVE_FLAG);
