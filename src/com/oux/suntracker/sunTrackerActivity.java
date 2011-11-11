@@ -86,12 +86,12 @@ public class sunTrackerActivity extends Activity {
 
         // Find the ID of the default camera
         CameraInfo cameraInfo = new CameraInfo();
-            for (int i = 0; i < numberOfCameras; i++) {
-                Camera.getCameraInfo(i, cameraInfo);
-                if (cameraInfo.facing == CameraInfo.CAMERA_FACING_BACK) {
-                    defaultCameraId = i;
-                }
+        for (int i = 0; i < numberOfCameras; i++) {
+            Camera.getCameraInfo(i, cameraInfo);
+            if (cameraInfo.facing == CameraInfo.CAMERA_FACING_BACK) {
+                defaultCameraId = i;
             }
+        }
     }
 
     @Override
@@ -111,6 +111,8 @@ public class sunTrackerActivity extends Activity {
             super.onResume();
             mCamera = Camera.open();
             cameraCurrentlyLocked = defaultCameraId;
+            Camera.Parameters parameters = mCamera.getParameters();
+            mDraw.setViewAngles(parameters.getVerticalViewAngle(),parameters.getHorizontalViewAngle());
             mPreview.setCamera(mCamera);
             mSensorManager.registerListener(mDraw,
                 mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD),

@@ -36,14 +36,13 @@ class DrawOnTop extends View implements SensorEventListener {
     private float   mHeight;
     int day_number;
     // http://engnet.anu.edu.au/DEpeople/Andres.Cuevas/Sun/help/SPguide.html
-    float radius_x,radius_y;
+    float radius_x=200,radius_y=200;
+    float mHorizontalAngle=1,mVerticalAngle=1;
     float fi,omega;
-    float delta_0_deg;
-    float delta_0;
-    float delta_y_deg;
     float delta_y;
-    float omega_s_0;
-    float delta, delta_deg;
+    float omega_s_winterSolstice;
+    float omega_s_summerSolstice;
+    float delta, deltaWinterSolstice, deltaSummerSolstice;
     float omega_s;
     float alfa, pointed_alfa=0;
     float psi, pointed_psi=0;
@@ -51,6 +50,8 @@ class DrawOnTop extends View implements SensorEventListener {
     int graduation=24*4;
     int angle_view_x=50;
     int pointed_hour=0;
+    int summerSolsticeDay=177;
+    int winterSolsticeDay=355;
     float[] sunrise_points = new float[365];
     float[] sunset_points = new float[365];
     float[] hours_points = new float[graduation*4];
@@ -64,16 +65,9 @@ class DrawOnTop extends View implements SensorEventListener {
     private float[] _accelerometerValues   = null;  //Valeur de l'accéléromètre
     private float[] _magneticValues          = null;  //Valeurs du champ magnétique
 
-    public void changeDate() {
-        Calendar date = Calendar.getInstance();
-        changeDate(date);
-    }
-
 	public DrawOnTop(Context context) {
 		super(context);
         // Log.v(TAG,"DrawOnTop...");
-        this.radius_x=200; //this.getWidth();
-        this.radius_y=200; // this.getHeight();
         mColors[0] = Color.argb(192, 255, 64, 64);
         mColors[1] = Color.argb(192, 64, 128, 64);
         mColors[2] = Color.argb(192, 64, 64, 255);
@@ -86,14 +80,25 @@ class DrawOnTop extends View implements SensorEventListener {
         mPath.arcTo(mRect, 0, 180);
         changeDate();
 
-        for (int i=1; i < 365 ; i++)
-        {
-            delta_0 = (float)Math.toRadians((float)23.45 * FloatMath.sin ((float)((i - 81) * 2*(float)Math.PI / 365)));
-            omega_s_0 = (float)Math.acos(-(float)Math.tan(fi) * (float)Math.tan(delta_0));
-            sunrise_points[i]=(float)Math.PI+omega_s_0;
-            sunset_points[i]=(float)Math.PI-omega_s_0;
-        }
+        deltaWinterSolstice = (float)Math.toRadians((float)23.45 * FloatMath.sin ((float)((winterSolsticeDay - 81) * 2*(float)Math.PI / 365)));
+        omega_s_winterSolstice = (float)Math.acos(-(float)Math.tan(fi) * (float)Math.tan(deltaWinterSolstice));
+        sunrise_points[0]=(float)Math.PI+omega_s_winterSolstice;
+        sunset_points[0]=(float)Math.PI-omega_s_winterSolstice;
+        deltaSummerSolstice = (float)Math.toRadians((float)23.45 * FloatMath.sin ((float)((summerSolsticeDay - 81) * 2*(float)Math.PI / 365)));
+        omega_s_summerSolstice = (float)Math.acos(-(float)Math.tan(fi) * (float)Math.tan(deltaSummerSolstice));
+        sunrise_points[1]=(float)Math.PI+omega_s_summerSolstice;
+        sunset_points[1]=(float)Math.PI-omega_s_summerSolstice;
 	}
+
+    public void setViewAngles(float horizontalAngle, float verticalAngle) {
+        mHorizontalAngle=(float)Math.toRadians(horizontalAngle);
+        mVerticalAngle=(float)Math.toRadians(verticalAngle);
+    }
+
+    public void changeDate() {
+        Calendar date = Calendar.getInstance();
+        changeDate(date);
+    }
 
     public void changeDate(Calendar date) {
         // Initialisation regarding the localisation.
@@ -138,12 +143,19 @@ class DrawOnTop extends View implements SensorEventListener {
     }
 
     private float translate_x(double angle) {
-        return (float)(angle)*radius_x;
+        float retval=1000;
+        // return (float)(Math.tan(angle));
+        if (angle < mHorizontalAngle)
+            retval=(float)(Math.cos(angle)*Math.tan(angle)*mWidth);
+        return retval;
         // return (float)(Math.tan(angle)*radius_x);
     }
 
     private float translate_y(double angle) {
-        return (float)(angle)*radius_y;
+        float retval=1000;
+        if (angle < mVerticalAngle)
+            retval=(float)(Math.cos(angle)*Math.tan(angle)*mHeight);
+        return retval;
         // return (float)(Math.tan(angle)*radius_y);
     }
 
@@ -218,81 +230,15 @@ class DrawOnTop extends View implements SensorEventListener {
         protected void onDraw(Canvas canvas) {
             Paint paint = new Paint();
             if (mBitmap != null) {
-/*
-                final Path path = mPath;
-                final int outer = 0xFFC0C0C0;
-                final int inner = 0xFFff7010;
-
-                if (mLastX >= mMaxX) {
-                    mLastX = 0;
-                    final Canvas cavas = mCanvas;
-                    final float yoffset = mYOffset;
-                    final float maxx = mMaxX;
-                    final float oneG = SensorManager.STANDARD_GRAVITY * mScale[0];
-                    paint.setColor(0xFFAAAAAA);
-                    cavas.drawColor(0xFFFFFFFF);
-                    cavas.drawLine(0, yoffset,      maxx, yoffset,      paint);
-                    cavas.drawLine(0, yoffset+oneG, maxx, yoffset+oneG, paint);
-                    cavas.drawLine(0, yoffset-oneG, maxx, yoffset-oneG, paint);
-                }
-
-                float[] values = mOrientationValues;
-                if (mWidth < mHeight) {
-                    // 1/3 of screen
-                    float w0 = mWidth * 0.333333f;
-                    // less then 1/3 of screen
-                    float w  = w0 - 32;
-                    //  la half of 1/3
-                    float x = w0*0.5f;
-                    for (int i=2 ; i<3 ; i++) {
-
-                        canvas.save(Canvas.MATRIX_SAVE_FLAG);
-                        // x = w0/2 + n * w0
-                        canvas.translate(x, w*0.5f + 4.0f);
-                        
-                        canvas.save(Canvas.MATRIX_SAVE_FLAG);
-                        paint.setColor(outer);
-                        canvas.scale(w, w);
-                        canvas.drawOval(mRect, paint);
-                        canvas.restore();
-                        
-                        canvas.scale(w-5, w-5);
-                        paint.setColor(inner);
-                        canvas.rotate(-values[i+3]);
-                        canvas.drawPath(path, paint);
-                        
-                        canvas.restore();
-                        x += w0;
-                    }
-                } else {
-                    float h0 = mHeight * 0.333333f;
-                    float h  = h0 - 32;
-                    float y = h0*0.5f;
-                    for (int i=0 ; i<3 ; i++) {
-                        canvas.save(Canvas.MATRIX_SAVE_FLAG);
-                        canvas.translate(mWidth - (h*0.5f + 4.0f), y);
-                        canvas.save(Canvas.MATRIX_SAVE_FLAG);
-                        paint.setColor(outer);
-                        canvas.scale(h, h);
-                        canvas.drawOval(mRect, paint);
-                        canvas.restore();
-                        canvas.scale(h-5, h-5);
-                        paint.setColor(inner);
-                        canvas.rotate(-values[i+3]);
-                        canvas.drawPath(path, paint);
-                        canvas.restore();
-                        y += h0;
-                    }
-                }
-                */
                 //paint.setStyle(Paint.Style.FILL);
                 paint.setStyle(Paint.Style.STROKE);
                 paint.setColor(Color.RED);
                 paint.setTextSize(18);
-                paint.setStrokeWidth(2);
-                canvas.drawText("Direction: " + (float)(direction), 10, 20, paint);
-                canvas.drawText("Inclination: " + (float)(inclination), 10, 40, paint);
-                canvas.drawText("Rolling: " + (float)(rolling), 10, 60, paint);
+                paint.setStrokeWidth(1);
+//                canvas.drawText("Sunrise angle: " + (float)(sunrise_points[0]-direction), 10, 20, paint);
+//                canvas.drawText("Sunset angle: " + (float)(sunset_points[0]-direction), 10, 40, paint);
+//                canvas.drawText("Sunrise shift: " + (float)(translate_x(sunrise_points[0]-direction)), 10, 60, paint);
+//                canvas.drawText("Sunset shift: " + (float)(translate_x(sunset_points[0]-direction)), 10, 80, paint);
                 canvas.save(Canvas.MATRIX_SAVE_FLAG);
                 /*
                  ********* Take care of rolling + reference on center ********
@@ -302,14 +248,19 @@ class DrawOnTop extends View implements SensorEventListener {
                 canvas.translate(this.getWidth() / 2,this.getHeight() / 2);
                 canvas.rotate(-(float)Math.toDegrees(rolling) - 90);
                 /*
+                 ********* Vertical line in the center of screen (to target) ********
+                 */
+                paint.setColor(0xFFCCCCCC);
+                canvas.drawLine(0, -this.getHeight(), 0, this.getHeight(), paint);
+                canvas.drawLine(-this.getWidth(), -translate_y(inclination), this.getWidth(), -translate_y(inclination), paint);
+                /*
                  ********* Display sunrise and sunset for whole year ********
                  */
-                for (int i=1; i < 365 ; i++)
-                {
-                    paint.setColor(0xFFFFFF00);
-                    canvas.drawPoint(translate_x(sunrise_points[i]-direction),i-150,paint);
-                    canvas.drawPoint(translate_x(sunset_points[i]-direction),i-150,paint);
-                }
+                paint.setColor(0xFFFFFF00);
+                paint.setStrokeWidth(3);
+                canvas.drawLine(translate_x(sunrise_points[0]-direction),-translate_y(inclination),translate_x(sunrise_points[1]-direction),-translate_y(inclination),paint);
+                canvas.drawLine(translate_x(sunset_points[0]-direction),-translate_y(inclination),translate_x(sunset_points[1]-direction),-translate_y(inclination),paint);
+
                 pointed_hour=0;
                 for (int hour=0; hour < graduation*4; hour+=2)
                 {
@@ -321,6 +272,7 @@ class DrawOnTop extends View implements SensorEventListener {
                 }
                 for (int hour=0; hour < graduation*4; hour+=4)
                 {
+                    // TODO: use direction and convert to hour:minutes
                     if (Math.abs(hours_points_display[hour]) < (2*Math.PI*radius_x / graduation) ) {
                         pointed_hour=hour/4;
                     }
@@ -355,7 +307,7 @@ class DrawOnTop extends View implements SensorEventListener {
                     // delta_y = Math.toRadians((float)23.45 * FloatMath.sin ((float)((day + 254) * 2 * (float)Math.PI / 365)));
                     for (int hour=0; hour <24; hour++)
                     {
-                        omega=(float)( Math.PI*2*hour / 24);
+                        omega=(float)(Math.PI*2*hour / 24);
                         // TODO:A regarder pourquoi les saisons sont inversees
                         alfa = (float)Math.asin(FloatMath.sin(delta_y) * FloatMath.sin(fi) + FloatMath.cos(delta_y) * FloatMath.cos(fi) * FloatMath.cos(omega));
                         if (omega < Math.PI) {
@@ -378,12 +330,6 @@ class DrawOnTop extends View implements SensorEventListener {
                             paint);
                     }
                 }
-                paint.setColor(0xFFCCCCCC);
-                /*
-                 ********* Vertical line in the center of screen (to target) ********
-                 */
-                canvas.drawLine(0, -this.getHeight(), 0, this.getHeight(), paint);
-                canvas.drawLine(-this.getWidth(), -translate_y(inclination), this.getWidth(), -translate_y(inclination), paint);
 // canvas.drawText("delta: "+ delta, 10, hours_points[pointed_hour*4+1]+20, paint);
                 canvas.restore();
 //                canvas.save(Canvas.MATRIX_SAVE_FLAG);
