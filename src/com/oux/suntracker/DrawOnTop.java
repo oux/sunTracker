@@ -13,6 +13,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.hardware.Sensor;
+import android.util.Log;
 
 import java.util.Calendar;
 
@@ -48,7 +49,6 @@ class DrawOnTop extends View implements SensorEventListener {
     float psi, pointed_psi=0;
     /* Show different hours: */
     int graduation=24*4;
-    int angle_view_x=50;
     int pointed_hour=0;
     int summerSolsticeDay=177;
     int winterSolsticeDay=355;
@@ -142,19 +142,33 @@ class DrawOnTop extends View implements SensorEventListener {
         }
     }
 
+    /*
+    private null drawLineWithCheck() {
+        float retval=mHeight;
+        if (angle < mVerticalAngle)
+            retval=(float)(Math.cos(angle)*Math.tan(angle)*mHeight);
+        return retval;
+        // return (float)(Math.tan(angle)*radius_y);
+    }
+    */
+
     private float translate_x(double angle) {
-        float retval=1000;
+        float retval=mWidth+100;
         // return (float)(Math.tan(angle));
-        if (angle < mHorizontalAngle)
-            retval=(float)(Math.cos(angle)*Math.tan(angle)*mWidth);
+        if (angle < mHorizontalAngle) {
+            retval=(float)(Math.tan(angle)*radius_x);
+            // retval=(float)(Math.cos(angle)*Math.tan(angle)*mWidth);
+        }
         return retval;
         // return (float)(Math.tan(angle)*radius_x);
     }
 
     private float translate_y(double angle) {
-        float retval=1000;
-        if (angle < mVerticalAngle)
-            retval=(float)(Math.cos(angle)*Math.tan(angle)*mHeight);
+        float retval=mHeight+100;
+        if (angle < mVerticalAngle) {
+            retval=(float)(Math.tan(angle)*radius_y);
+//            retval=(float)(Math.cos(angle)*Math.tan(angle)*mHeight);
+        }
         return retval;
         // return (float)(Math.tan(angle)*radius_y);
     }
@@ -223,6 +237,15 @@ class DrawOnTop extends View implements SensorEventListener {
                 mMaxX = w-50;
             }
             mLastX = mMaxX;
+//            Log.d(TAG, "Horizontal View Angle: " + mHorizontalAngle);
+//            Log.d(TAG, "Vertical View Angle: " + mVerticalAngle);
+//            Log.d(TAG, "Width: " + getWidth());
+//            Log.d(TAG, "height: " + getHeight());
+            // X * Tan(mHorizontalAngle) = mWidth
+            radius_x=mWidth/(float)Math.tan(mHorizontalAngle);
+            radius_y=mHeight/(float)Math.tan(mVerticalAngle);
+//            Log.d(TAG, "Horizontal Radius: " + radius_x);
+//            Log.d(TAG, "Vertical Radius: " + radius_y);
             super.onSizeChanged(w, h, oldw, oldh);
         }
 
@@ -244,15 +267,15 @@ class DrawOnTop extends View implements SensorEventListener {
                  ********* Take care of rolling + reference on center ********
                  */
                 // TODO: reference could be on the middle top of the screen:
-                // canvas.translate(this.getWidth() / 2,this.getHeight() / 4);
-                canvas.translate(this.getWidth() / 2,this.getHeight() / 2);
+                // canvas.translate(mWidth / 2,mHeight / 4);
+                canvas.translate(mWidth / 2,mHeight / 2);
                 canvas.rotate(-(float)Math.toDegrees(rolling) - 90);
                 /*
                  ********* Vertical line in the center of screen (to target) ********
                  */
                 paint.setColor(0xFFCCCCCC);
-                canvas.drawLine(0, -this.getHeight(), 0, this.getHeight(), paint);
-                canvas.drawLine(-this.getWidth(), -translate_y(inclination), this.getWidth(), -translate_y(inclination), paint);
+                canvas.drawLine(0, -mHeight, 0, mHeight, paint);
+                canvas.drawLine(-mWidth, -translate_y(inclination), mWidth, -translate_y(inclination), paint);
                 /*
                  ********* Display sunrise and sunset for whole year ********
                  */
@@ -264,11 +287,8 @@ class DrawOnTop extends View implements SensorEventListener {
                 pointed_hour=0;
                 for (int hour=0; hour < graduation*4; hour+=2)
                 {
-                    hours_points_display[hour+graduation*8] = hours_points_display[hour+graduation*4] = hours_points_display[hour]=translate_x(hours_points[hour]-direction);
-                }
-                for (int hour=1; hour < graduation*4; hour+=2)
-                {
-                    hours_points_display[hour+graduation*8] = hours_points_display[hour+graduation*4] = hours_points_display[hour]=-translate_y(hours_points[hour]+inclination);
+                    hours_points_display[hour]=translate_x(hours_points[hour]-direction);
+                    hours_points_display[hour+1]=-translate_y(hours_points[hour+1]+inclination);
                 }
                 for (int hour=0; hour < graduation*4; hour+=4)
                 {
@@ -288,11 +308,11 @@ class DrawOnTop extends View implements SensorEventListener {
                 // canvas.drawText("omega_s: "+ omega_s, 10, hours_points[pointed_hour*4+1]+20, paint);
                 // canvas.drawText("psi: "+ pointed_psi, 10, hours_points[pointed_hour*4+1]+40, paint);
                 // canvas.drawText("alfa: "+ pointed_alfa, 10, hours_points[pointed_hour*4+1]+60, paint);
-                canvas.drawLine(translate_x(Math.PI+omega_s-direction), -this.getHeight(),
-                        translate_x(Math.PI+omega_s-direction), this.getHeight(), paint);
+                canvas.drawLine(translate_x(Math.PI+omega_s-direction), -mHeight,
+                        translate_x(Math.PI+omega_s-direction), mHeight, paint);
                 paint.setColor(0xFF0000FF);
-                canvas.drawLine(translate_x(Math.PI-omega_s-direction), -this.getHeight(),
-                        translate_x(Math.PI-omega_s-direction), this.getHeight(), paint);
+                canvas.drawLine(translate_x(Math.PI-omega_s-direction), -mHeight,
+                        translate_x(Math.PI-omega_s-direction), mHeight, paint);
                 /* Show different seasons: */
                 for (int day=1; day < 365 ; day=day+30)
                 {
