@@ -33,22 +33,23 @@ class DrawOnTop extends View implements SensorEventListener {
     private Paint   mPaint = new Paint();
     private Canvas  mCanvas = new Canvas();
     private Bitmap  mBitmap;
-    private float   mWidth;
-    private float   mHeight;
-    int day_number;
+    private int   mWidth;
+    private int   mHeight;
+    int mDayNumber;
     // http://engnet.anu.edu.au/DEpeople/Andres.Cuevas/Sun/help/SPguide.html
-    float radius_x=200,radius_y=200;
+    float mRadiusX=200,mRadiusY=200;
     float mHorizontalAngle=1,mVerticalAngle=1;
-    float fi,omega;
+    float mFi;
     float delta_y;
-    float omega_s_winterSolstice;
-    float omega_s_summerSolstice;
-    float delta, deltaWinterSolstice, deltaSummerSolstice;
-    float omega_s;
+    float mOmegaS_winterSolstice;
+    float mOmegaS_summerSolstice;
+    float mDelta, deltaWinterSolstice, deltaSummerSolstice;
+    float mOmegaS;
     float alfa, pointed_alfa=0;
     float psi, pointed_psi=0;
     /* Show different hours: */
     int graduation=24*4;
+    int mDefinition=5;
     int pointed_hour=0;
     int summerSolsticeDay=177;
     int winterSolsticeDay=355;
@@ -58,12 +59,13 @@ class DrawOnTop extends View implements SensorEventListener {
     float pointed_hour_y;
     float[] hours_points = new float[graduation*4];
     float[] omega_points = new float[graduation];
+    float[] hoursPointsDisplay = new float[mWidth*2];;
     float[] hours_points_display = new float[graduation*4*3];
-    // private float   direction;
-    public static volatile float new_direction = (float) 0;
-    public static volatile float direction = (float) 0;
-    public static volatile float rolling = (float) 0;
-    public static volatile float inclination = (float) 0;
+    // private float   mDirection;
+    public static volatile float new_mDirection = (float) 0;
+    public static volatile float mDirection = (float) 0;
+    public static volatile float mRolling = (float) 0;
+    public static volatile float mInclination = (float) 0;
     public static volatile float kFilteringFactor = (float)0.05;
     private float[] _accelerometerValues   = null;  //Valeur de l'accéléromètre
     private float[] _magneticValues          = null;  //Valeurs du champ magnétique
@@ -84,18 +86,103 @@ class DrawOnTop extends View implements SensorEventListener {
         changeDate();
 
         deltaWinterSolstice = (float)Math.toRadians((float)23.45 * FloatMath.sin ((float)((winterSolsticeDay - 81) * 2*(float)Math.PI / 365)));
-        omega_s_winterSolstice = (float)Math.acos(-(float)Math.tan(fi) * (float)Math.tan(deltaWinterSolstice));
-        sunrise_points[0]=(float)Math.PI+omega_s_winterSolstice;
-        sunset_points[0]=(float)Math.PI-omega_s_winterSolstice;
+        mOmegaS_winterSolstice = (float)Math.acos(-(float)Math.tan(mFi) * (float)Math.tan(deltaWinterSolstice));
+        sunrise_points[0]=(float)Math.PI+mOmegaS_winterSolstice;
+        sunset_points[0]=(float)Math.PI-mOmegaS_winterSolstice;
         deltaSummerSolstice = (float)Math.toRadians((float)23.45 * FloatMath.sin ((float)((summerSolsticeDay - 81) * 2*(float)Math.PI / 365)));
-        omega_s_summerSolstice = (float)Math.acos(-(float)Math.tan(fi) * (float)Math.tan(deltaSummerSolstice));
-        sunrise_points[1]=(float)Math.PI+omega_s_summerSolstice;
-        sunset_points[1]=(float)Math.PI-omega_s_summerSolstice;
+        mOmegaS_summerSolstice = (float)Math.acos(-(float)Math.tan(mFi) * (float)Math.tan(deltaSummerSolstice));
+        sunrise_points[1]=(float)Math.PI+mOmegaS_summerSolstice;
+        sunset_points[1]=(float)Math.PI-mOmegaS_summerSolstice;
 	}
 
     public void setViewAngles(float horizontalAngle, float verticalAngle) {
         mHorizontalAngle=(float)Math.toRadians(horizontalAngle);
         mVerticalAngle=(float)Math.toRadians(verticalAngle);
+    }
+
+    // Get hours angle from pixel X
+    private float getHourAngle(int i) {
+        float angle;
+        //if (i < mWidth/2) {
+            angle=(float)Math.PI-(float)Math.atan(i/mRadiusX)-mDirection;
+            /*
+        } else {
+            angle=(float)Math.PI+(float)Math.atan(i/mRadiusX)-mDirection;
+        }
+        */
+        return angle;
+    }
+
+    // Geolocation dependence
+    private float getFi() {
+        return (float)Math.toRadians(43.49); //TODO: to dynamise
+    }
+
+    // Date dependence
+    private float getDelta(int day) {
+        return (float)Math.toRadians((float)23.45 * FloatMath.sin ((float)((day - 81) * 2*(float)Math.PI / 365)));
+    }
+
+    // Alfa = Altitude (y)
+    private float getAlfa(float delta, float omega) {
+        return (float)Math.asin(FloatMath.sin((float)delta) * FloatMath.sin(mFi) + FloatMath.cos((float)delta) * FloatMath.cos(mFi) * FloatMath.cos((float)omega));
+    }
+
+    // Alfa = Altitude (y)
+    private float getAlfa(float omega) {
+        return (float)Math.asin(FloatMath.sin(mDelta) * FloatMath.sin(mFi) + FloatMath.cos(mDelta) * FloatMath.cos(mFi) * FloatMath.cos((float)omega));
+    }
+
+    // Psi = hour angle (x)
+    private float getPsi(float omega) {
+            psi = 0;
+            alfa = getAlfa(omega);
+            if (omega < Math.PI) {
+                // TODO: remove 2PI shift here and on mDirection compute if possible
+                psi = 2 * (float)Math.PI -(float)Math.acos(
+                    (FloatMath.cos(mFi) * FloatMath.sin(mDelta) - FloatMath.cos(mDelta) * FloatMath.sin(mFi) * FloatMath.cos((float)omega)
+                    ) / FloatMath.cos (alfa)
+                   );
+            } else {
+                psi = (float)Math.acos(
+                    (FloatMath.cos(mFi) * FloatMath.sin(mDelta) - FloatMath.cos(mDelta) * FloatMath.sin(mFi) * FloatMath.cos((float)omega)
+                    ) / FloatMath.cos (alfa)
+                    );
+            }
+        return psi;
+    }
+
+    private float translateX(double angle) {
+        float retval=1000;
+        // return (float)(Math.tan(angle));
+        if (angle < 0 && angle < -mHorizontalAngle) {
+            retval=-mWidth;
+        } else if (angle > 0 && angle > mHorizontalAngle ) {
+            retval=mWidth;
+        } else if ((angle > 0 && angle < mHorizontalAngle) || (angle < 0 && angle > -mHorizontalAngle)) {
+            retval=(float)(Math.tan(angle)*mRadiusX);
+            // retval=(float)(Math.cos(angle)*Math.tan(angle)*mWidth);
+        }
+        return retval;
+        // return (float)(Math.tan(angle)*mRadiusX);
+    }
+
+    private float translateY(double angle) {
+        float retval=1000;
+        if (angle < 0 && angle < -mVerticalAngle) {
+            retval=-mHeight;
+        } else if (angle > 0 && angle > mVerticalAngle ) {
+            retval=mHeight;
+        } else if ((angle > 0 && angle < mVerticalAngle) || (angle < 0 && angle > -mVerticalAngle)) {
+            retval=(float)(Math.tan(angle)*mRadiusX);
+            // retval=(float)(Math.cos(angle)*Math.tan(angle)*mHeight);
+        }
+        return retval;
+        // return (float)(Math.tan(angle)*mRadiusY);
+    }
+
+    private float getY(float omega) {
+        return -translateY(getAlfa(omega)+mInclination);
     }
 
     public void changeDate() {
@@ -104,32 +191,20 @@ class DrawOnTop extends View implements SensorEventListener {
     }
 
     public void changeDate(Calendar date) {
+        float omega;
         // Initialisation regarding the localisation.
-        day_number = date.get(Calendar.DAY_OF_YEAR);
+        mDayNumber = date.get(Calendar.DAY_OF_YEAR);
         // http://engnet.anu.edu.au/DEpeople/Andres.Cuevas/Sun/help/SPguide.html
-        fi=(float)Math.toRadians((float)43.49); // to dynamise
-        // fi=(float)Math.PI / 4;
-        // delta = deg_to_rad((float)23.45 * FloatMath.sin ((float)((day_number + 254) * 2*(float)Math.PI / 365)));
-        delta = (float)Math.toRadians((float)23.45 * FloatMath.sin ((float)((day_number - 81) * 2*(float)Math.PI / 365)));
-        omega_s = (float)Math.acos(-((float)Math.tan(fi) * (float)Math.tan(delta)));
+        mDelta = getDelta(mDayNumber);
+        mFi=getFi();
+        mOmegaS = (float)Math.acos(-((float)Math.tan(mFi) * (float)Math.tan(mDelta)));
         for (int hour=0; hour < graduation; hour++)
         {
             omega= (float)( (Math.PI * 2 * hour / graduation) - Math.PI);
             // omega= (float)( (Math.PI * 2 * hour / graduation) + Math.PI);
-            alfa = (float)Math.asin(FloatMath.sin(delta) * FloatMath.sin(fi) + FloatMath.cos(delta) * FloatMath.cos(fi) * FloatMath.cos(omega));
-            psi = 0;
-            if (omega < 0) {
-                psi = (float)Math.acos(
-                    (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
-                    ) / FloatMath.cos (alfa)
-                    );
-            } else {
-                // TODO: remove 2PI shift here and on direction compute if possible
-                psi = 2 * (float)Math.PI -(float)Math.acos(
-                    (FloatMath.cos(fi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(fi) * FloatMath.cos(omega)
-                    ) / FloatMath.cos (alfa)
-                   );
-            }
+            psi = getPsi(omega);
+            alfa = getAlfa(omega);
+            // TODO: getAlfaPsi(omega, alfa, psi);
             if (hour == 0){
                 omega_points[hour]=omega;
                 hours_points[hour*4]=psi;
@@ -154,38 +229,9 @@ class DrawOnTop extends View implements SensorEventListener {
         if (angle < mVerticalAngle)
             retval=(float)(Math.cos(angle)*Math.tan(angle)*mHeight);
         return retval;
-        // return (float)(Math.tan(angle)*radius_y);
+        // return (float)(Math.tan(angle)*mRadiusY);
     }
     */
-
-    private float translate_x(double angle) {
-        float retval=1000;
-        // return (float)(Math.tan(angle));
-        if (angle < 0 && angle < -mHorizontalAngle) {
-            retval=-mWidth;
-        } else if (angle > 0 && angle > mHorizontalAngle ) {
-            retval=mWidth;
-        } else if ((angle > 0 && angle < mHorizontalAngle) || (angle < 0 && angle > -mHorizontalAngle)) {
-            retval=(float)(Math.tan(angle)*radius_x);
-            // retval=(float)(Math.cos(angle)*Math.tan(angle)*mWidth);
-        }
-        return retval;
-        // return (float)(Math.tan(angle)*radius_x);
-    }
-
-    private float translate_y(double angle) {
-        float retval=1000;
-        if (angle < 0 && angle < -mVerticalAngle) {
-            retval=-mHeight;
-        } else if (angle > 0 && angle > mVerticalAngle ) {
-            retval=mHeight;
-        } else if ((angle > 0 && angle < mVerticalAngle) || (angle < 0 && angle > -mVerticalAngle)) {
-            retval=(float)(Math.tan(angle)*radius_x);
-            // retval=(float)(Math.cos(angle)*Math.tan(angle)*mHeight);
-        }
-        return retval;
-        // return (float)(Math.tan(angle)*radius_y);
-    }
 
     public void onSensorChanged(SensorEvent event) {
         synchronized (this) {
@@ -212,21 +258,21 @@ class DrawOnTop extends View implements SensorEventListener {
                         //Orientation in rad
                         // Translate -PI<>+PI range to 0<>2PI range
                         if (orientation[0] < 0) {
-                            new_direction=(float)(orientation[0]+2*Math.PI);
+                            new_mDirection=(float)(orientation[0]+2*Math.PI);
                         } else {
-                            new_direction=(float)orientation[0];
+                            new_mDirection=(float)orientation[0];
                         }
-                        if (new_direction >3*(Math.PI/2) && (direction < Math.PI/2) || (new_direction < Math.PI/2) && (direction > 3*(Math.PI/2))) {
+                        if (new_mDirection >3*(Math.PI/2) && (mDirection < Math.PI/2) || (new_mDirection < Math.PI/2) && (mDirection > 3*(Math.PI/2))) {
                             // to avoid big slide on -PI to + PI transition:
-                            direction = new_direction;
+                            mDirection = new_mDirection;
                         } else {
-                            direction = (float) ((new_direction * kFilteringFactor) + 
-                                    (direction * (1.0 - kFilteringFactor)));
+                            mDirection = (float) ((new_mDirection * kFilteringFactor) +
+                                    (mDirection * (1.0 - kFilteringFactor)));
                         }
-                        inclination = (float) ((orientation[1] * kFilteringFactor) + 
-                                (inclination * (1.0 - kFilteringFactor)));
-                        rolling = (float) ((orientation[2] * kFilteringFactor) + 
-                                (rolling * (1.0 - kFilteringFactor)));
+                        mInclination = (float) ((orientation[1] * kFilteringFactor) +
+                                (mInclination * (1.0 - kFilteringFactor)));
+                        mRolling = (float) ((orientation[2] * kFilteringFactor) +
+                                (mRolling * (1.0 - kFilteringFactor)));
                     }
                 }
                 invalidate();
@@ -256,15 +302,18 @@ class DrawOnTop extends View implements SensorEventListener {
 //            Log.d(TAG, "Width: " + getWidth());
 //            Log.d(TAG, "height: " + getHeight());
             // X * Tan(mHorizontalAngle) = mWidth
-            radius_x=mWidth/(float)Math.tan(mHorizontalAngle);
-            radius_y=mHeight/(float)Math.tan(mVerticalAngle);
-//            Log.d(TAG, "Horizontal Radius: " + radius_x);
-//            Log.d(TAG, "Vertical Radius: " + radius_y);
+            mRadiusX=(mWidth/2)/(float)Math.tan(mHorizontalAngle/2);
+            mRadiusY=(mHeight/2)/(float)Math.tan(mVerticalAngle/2);
+            hoursPointsDisplay= new float[(int)(mWidth*2/mDefinition)];
+//            Log.d(TAG, "Horizontal Radius: " + mRadiusX);
+//            Log.d(TAG, "Vertical Radius: " + mRadiusY);
             super.onSizeChanged(w, h, oldw, oldh);
         }
 
 	@Override
         protected void onDraw(Canvas canvas) {
+            float omega=0;
+            int x=0,i=0;
             Paint paint = new Paint();
             if (mBitmap != null) {
                 //paint.setStyle(Paint.Style.FILL);
@@ -272,46 +321,47 @@ class DrawOnTop extends View implements SensorEventListener {
                 paint.setColor(Color.RED);
                 paint.setTextSize(18);
                 paint.setStrokeWidth(1);
-//                canvas.drawText("Sunrise angle: " + (float)(sunrise_points[0]-direction), 10, 20, paint);
-//                canvas.drawText("Sunset angle: " + (float)(sunset_points[0]-direction), 10, 40, paint);
-//                canvas.drawText("Sunrise shift: " + (float)(translate_x(sunrise_points[0]-direction)), 10, 60, paint);
-//                canvas.drawText("Sunset shift: " + (float)(translate_x(sunset_points[0]-direction)), 10, 80, paint);
+//                canvas.drawText("Sunrise angle: " + (float)(sunrise_points[0]-mDirection), 10, 20, paint);
+//                canvas.drawText("Sunset angle: " + (float)(sunset_points[0]-mDirection), 10, 40, paint);
+//                canvas.drawText("Sunrise shift: " + (float)(translateX(sunrise_points[0]-mDirection)), 10, 60, paint);
+//                canvas.drawText("Sunset shift: " + (float)(translateX(sunset_points[0]-mDirection)), 10, 80, paint);
                 canvas.save(Canvas.MATRIX_SAVE_FLAG);
                 /*
-                 ********* Take care of rolling + reference on center ********
+                 ********* Take care of mRolling + reference on center ********
                  */
                 // TODO: reference could be on the middle top of the screen:
                 // canvas.translate(mWidth / 2,mHeight / 4);
                 canvas.translate(mWidth / 2,mHeight / 2);
-                canvas.rotate(-(float)Math.toDegrees(rolling) - 90);
+                canvas.rotate(-(float)Math.toDegrees(mRolling) - 90);
                 /*
                  ********* Vertical line in the center of screen (to target) ********
                  */
                 paint.setColor(0xFFCCCCCC);
                 canvas.drawLine(0, -mHeight, 0, mHeight, paint);
-                canvas.drawLine(-mWidth, -translate_y(inclination), mWidth, -translate_y(inclination), paint);
+                canvas.drawLine(-mWidth, -translateY(mInclination), mWidth, -translateY(mInclination), paint);
                 /*
                  ********* Display sunrise and sunset for whole year ********
                  */
                 paint.setColor(0xFFFFFF00);
                 paint.setStrokeWidth(3);
-                canvas.drawLine(translate_x(sunrise_points[0]-direction),-translate_y(inclination),translate_x(sunrise_points[1]-direction),-translate_y(inclination),paint);
-                canvas.drawLine(translate_x(sunset_points[0]-direction),-translate_y(inclination),translate_x(sunset_points[1]-direction),-translate_y(inclination),paint);
+                canvas.drawLine(translateX(sunrise_points[0]-mDirection),-translateY(mInclination),translateX(sunrise_points[1]-mDirection),-translateY(mInclination),paint);
+                canvas.drawLine(translateX(sunset_points[0]-mDirection),-translateY(mInclination),translateX(sunset_points[1]-mDirection),-translateY(mInclination),paint);
 
                 pointed_hour=0;
                 pointed_hour_x=Math.abs(hours_points_display[0]);
+
                 for (int hour=0; hour < graduation*4; hour+=2)
                 {
-                    hours_points_display[hour]=translate_x(hours_points[hour]-direction);
-                    hours_points_display[hour+1]=-translate_y(hours_points[hour+1]+inclination);
-                    // TODO: use direction and convert to hour:minutes
+                    hours_points_display[hour]=translateX(hours_points[hour]-mDirection);
+                    hours_points_display[hour+1]=-translateY(hours_points[hour+1]+mInclination);
+                    // TODO: use mDirection and convert to hour:minutes
                     if (Math.abs(hours_points_display[hour]) < pointed_hour_x ) {
                         pointed_hour_x=Math.abs(hours_points_display[hour]);
                         pointed_hour_y=hours_points_display[hour+1];
                         pointed_psi=hours_points[hour];
                         pointed_alfa=hours_points[hour+1];
                         pointed_hour=hour/4;
-                        // Log.v(TAG,"Y["+(hour+1)+"]="+hours_points_display[hour+1]+" from:"+hours_points[hour+1]+"+"+inclination);
+                        // Log.v(TAG,"Y["+(hour+1)+"]="+hours_points_display[hour+1]+" from:"+hours_points[hour+1]+"+"+mInclination);
                     }
                 }
                 paint.setColor(Color.GREEN);
@@ -319,24 +369,34 @@ class DrawOnTop extends View implements SensorEventListener {
                 /*
                  ********* Print sun path of day ********
                  */
-                canvas.drawLines(hours_points_display,paint);
+                // canvas.drawLines(hours_points_display,paint);
+                // Display just necessary :
+                for (i=0; i < mWidth/mDefinition; i+=1)
+                {
+                    x=(i*mDefinition)-(mWidth/2);
+                    omega=getHourAngle(x);
+                    hoursPointsDisplay[i*2]=x;//translateX(getPsi(omega)-mDirection);
+                    hoursPointsDisplay[i*2+1]=getY(omega);
+                }
                 paint.setColor(Color.YELLOW);
+                paint.setStrokeWidth(3);
+                canvas.drawLines(hoursPointsDisplay,paint);
                 paint.setStyle(Paint.Style.FILL);
-                canvas.drawCircle(0, hours_points_display[pointed_hour*4+1], 10, paint);
+                canvas.drawCircle(0, getY(getHourAngle(0)), 20, paint);
                 paint.setColor(0xFFFF0000);
-                canvas.drawText("Hour: " + (float)(24 * pointed_hour / (float)graduation), 20, hours_points_display[pointed_hour*4+1], paint);
-                canvas.drawText("Hour: " + (float)(24 * pointed_hour / (float)graduation), 20, hours_points_display[pointed_hour*4+1], paint);
-                canvas.drawText("omega_s: "+ omega_s, -10, hours_points[pointed_hour*4+1]-20, paint);
-                canvas.drawText("omega: "+ omega_points[pointed_hour], -10, hours_points[pointed_hour*4+1], paint);
-                canvas.drawText("direction: "+ direction, -10, hours_points[pointed_hour*4+1]+20, paint);
-                canvas.drawText("alfa: "+ pointed_alfa, -10, hours_points[pointed_hour*4+1]+40, paint);
-                canvas.drawText("pointed x: "+ pointed_hour_x, -10, hours_points[pointed_hour*4+1]+60, paint);
-                canvas.drawText("pointed y: "+ pointed_hour_y, -10, hours_points[pointed_hour*4+1]+80, paint);
-                canvas.drawLine(translate_x(Math.PI+omega_s-direction), -mHeight,
-                        translate_x(Math.PI+omega_s-direction), mHeight, paint);
+                canvas.drawText("Hour: " + (float)(24 * (getHourAngle(0)-Math.PI))/(float)(-Math.PI*2), 20, getY(getHourAngle(0))+20, paint);
+//                canvas.drawText("omega: "+ getHourAngle(0), -10, hours_points[pointed_hour*4+1]-20, paint);
+//                canvas.drawText("solar Y: "+ getY(getHourAngle(0)), -10, hours_points[pointed_hour*4+1], paint);
+                // canvas.drawText("omega: "+ omega_points[pointed_hour], -10, hours_points[pointed_hour*4+1], paint);
+//                canvas.drawText("mDirection: "+ mDirection, -10, hours_points[pointed_hour*4+1]+20, paint);
+//                canvas.drawText("alfa: "+ pointed_alfa, -10, hours_points[pointed_hour*4+1]+40, paint);
+//                canvas.drawText("pointed x: "+ pointed_hour_x, -10, hours_points[pointed_hour*4+1]+60, paint);
+//                canvas.drawText("pointed y: "+ pointed_hour_y, -10, hours_points[pointed_hour*4+1]+80, paint);
+                canvas.drawLine(translateX(Math.PI+mOmegaS-mDirection), -mHeight,
+                        translateX(Math.PI+mOmegaS-mDirection), mHeight, paint);
                 paint.setColor(0xFF0000FF);
-                canvas.drawLine(translate_x(Math.PI-omega_s-direction), -mHeight,
-                        translate_x(Math.PI-omega_s-direction), mHeight, paint);
+                canvas.drawLine(translateX(Math.PI-mOmegaS-mDirection), -mHeight,
+                        translateX(Math.PI-mOmegaS-mDirection), mHeight, paint);
                 /* Show different seasons: */
                 for (int day=1; day < 365 ; day=day+30)
                 {
@@ -347,34 +407,34 @@ class DrawOnTop extends View implements SensorEventListener {
                     }else {
                         paint.setColor(Color.rgb(0,0,day%120+120));
                     }
-                    delta_y = (float)Math.toRadians((float)23.45 * FloatMath.sin ((float)((day - 81) * 2 * (float)Math.PI / 365)));
+                    delta_y = getDelta(day);
                     // delta_y = Math.toRadians((float)23.45 * FloatMath.sin ((float)((day + 254) * 2 * (float)Math.PI / 365)));
                     for (int hour=0; hour <24; hour++)
                     {
                         omega=(float)(Math.PI*2*hour / 24);
                         // TODO:A regarder pourquoi les saisons sont inversees
-                        alfa = (float)Math.asin(FloatMath.sin(delta_y) * FloatMath.sin(fi) + FloatMath.cos(delta_y) * FloatMath.cos(fi) * FloatMath.cos(omega));
+                        alfa = getAlfa(delta_y, omega);
                         if (omega < Math.PI) {
                             // First part of the day
                             psi  = 2*(float)Math.PI - (float)Math.acos(
-                                (FloatMath.cos(fi) * FloatMath.sin(delta_y) - FloatMath.cos(delta_y) * FloatMath.sin(fi) * FloatMath.cos(omega)
+                                (FloatMath.cos(mFi) * FloatMath.sin(delta_y) - FloatMath.cos(delta_y) * FloatMath.sin(mFi) * FloatMath.cos(omega)
                                  ) / FloatMath.cos (alfa));
                         } else {
                             // second part of the day
                             psi  = (float)Math.acos(
-                                (FloatMath.cos(fi) * FloatMath.sin(delta_y) - FloatMath.cos(delta_y) * FloatMath.sin(fi) * FloatMath.cos(omega)
+                                (FloatMath.cos(mFi) * FloatMath.sin(delta_y) - FloatMath.cos(delta_y) * FloatMath.sin(mFi) * FloatMath.cos(omega)
                                  ) / FloatMath.cos (alfa));
                         }
                         /*
                         ********* Print seasons ********
                         */
                         canvas.drawPoint(
-                            translate_x(psi-direction),
-                            -translate_y(alfa+inclination),
+                            translateX(psi-mDirection),
+                            -translateY(alfa+mInclination),
                             paint);
                     }
                 }
-// canvas.drawText("delta: "+ delta, 10, hours_points[pointed_hour*4+1]+20, paint);
+// canvas.drawText("mDelta: "+ mDelta, 10, hours_points[pointed_hour*4+1]+20, paint);
                 canvas.restore();
 //                canvas.save(Canvas.MATRIX_SAVE_FLAG);
 //                for (int i =10; i > 360; i+=10) {
