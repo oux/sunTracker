@@ -113,6 +113,13 @@ class DrawOnTop extends View implements SensorEventListener {
         return angle;
     }
 
+    // Get hours:minutes from Radian angle
+    private string radianToHour(float angle) {
+		SimpleDateFormat sdf = new SimpleDateFormat("hh:mm");
+		Date date = new Date(Math.toDegrees(angle)*10);
+        return DateFormat(date);
+	}
+
     // Geolocation dependence
     private float getFi() {
         return (float)Math.toRadians(43.49); //TODO: to dynamise
@@ -384,7 +391,7 @@ class DrawOnTop extends View implements SensorEventListener {
                 paint.setStyle(Paint.Style.FILL);
                 canvas.drawCircle(0, getY(getHourAngle(0)), 20, paint);
                 paint.setColor(0xFFFF0000);
-                canvas.drawText("Hour: " + (float)(24 * (getHourAngle(0)-Math.PI))/(float)(-Math.PI*2), 20, getY(getHourAngle(0))+20, paint);
+                canvas.drawText("Hour: " + radianToHour(getHourAngle(0)), 20, getY(getHourAngle(0))+20, paint);
 //                canvas.drawText("omega: "+ getHourAngle(0), -10, hours_points[pointed_hour*4+1]-20, paint);
 //                canvas.drawText("solar Y: "+ getY(getHourAngle(0)), -10, hours_points[pointed_hour*4+1], paint);
                 // canvas.drawText("omega: "+ omega_points[pointed_hour], -10, hours_points[pointed_hour*4+1], paint);
