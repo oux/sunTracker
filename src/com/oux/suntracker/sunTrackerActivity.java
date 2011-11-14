@@ -38,8 +38,7 @@ import java.io.IOException;
 import java.util.Calendar;
 
 /**
- * Wrapper activity demonstrating the use of {@link GLSurfaceView}, a view
- * that uses OpenGL drawing into a dedicated surface.
+ * TODO: capture button + add exif info on orientation, hour, season/date projection etc.
  */
 public class sunTrackerActivity extends Activity {
     private Preview mPreview;

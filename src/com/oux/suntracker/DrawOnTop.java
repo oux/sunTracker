@@ -16,6 +16,8 @@ import android.hardware.Sensor;
 import android.util.Log;
 
 import java.util.Calendar;
+import java.util.Date;
+import java.text.SimpleDateFormat;
 
 class DrawOnTop extends View implements SensorEventListener {
     private static final String TAG = "Sun Tracker View";
@@ -111,6 +113,13 @@ class DrawOnTop extends View implements SensorEventListener {
         }
         */
         return angle;
+    }
+
+    // Get hours:minutes from Radian angle
+    private String radianToHour(float angle) {
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
+        Date date = new Date(24*(long)Math.toDegrees(Math.PI-angle)*10*1000);
+        return sdf.format(date);
     }
 
     // Geolocation dependence
@@ -384,7 +393,7 @@ class DrawOnTop extends View implements SensorEventListener {
                 paint.setStyle(Paint.Style.FILL);
                 canvas.drawCircle(0, getY(getHourAngle(0)), 20, paint);
                 paint.setColor(0xFFFF0000);
-                canvas.drawText("Hour: " + (float)(24 * (getHourAngle(0)-Math.PI))/(float)(-Math.PI*2), 20, getY(getHourAngle(0))+20, paint);
+                canvas.drawText("Hour: " + radianToHour(getHourAngle(0)), 20, getY(getHourAngle(0))+20, paint);
 //                canvas.drawText("omega: "+ getHourAngle(0), -10, hours_points[pointed_hour*4+1]-20, paint);
 //                canvas.drawText("solar Y: "+ getY(getHourAngle(0)), -10, hours_points[pointed_hour*4+1], paint);
                 // canvas.drawText("omega: "+ omega_points[pointed_hour], -10, hours_points[pointed_hour*4+1], paint);
@@ -456,3 +465,4 @@ class DrawOnTop extends View implements SensorEventListener {
         // TODO Auto-generated method stub
     }
 }
+// vim:et:
