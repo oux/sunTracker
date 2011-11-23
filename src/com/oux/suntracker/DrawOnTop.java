@@ -58,14 +58,14 @@ class DrawOnTop extends View implements SensorEventListener {
     float pointed_hour_y;
     float[] hours_points = new float[graduation*4];
     float[] omega_points = new float[graduation];
-    float[] hoursPointsDisplay = new float[mWidth*2+2];;
+    float[] hoursPointsDisplay = new float[mWidth*3];;
     float[] hours_points_display = new float[graduation*4*3];
     // private float   mDirection;
     public static volatile float new_mDirection = (float) 0;
     public static volatile float mDirection = (float) 0;
     public static volatile float mRolling = (float) 0;
     public static volatile float mInclination = (float) 0;
-    public static volatile float kFilteringFactor = (float)0.1;
+    public static volatile float kFilteringFactor = (float)0.05;
     // public static volatile float kFilteringFactor = (float)0.05;
     private float[] _accelerometerValues   = null;  //Valeur de l'accéléromètre
     private float[] _magneticValues          = null;  //Valeurs du champ magnétique
@@ -183,7 +183,7 @@ class DrawOnTop extends View implements SensorEventListener {
         } else if (angle > 0 && angle > mVerticalAngle ) {
             retval=mHeight;
         } else if ((angle > 0 && angle < mVerticalAngle) || (angle < 0 && angle > -mVerticalAngle)) {
-            retval=(float)(Math.tan(angle)*mRadiusX);
+            retval=(float)(Math.tan(angle)*mRadiusY);
             // retval=(float)(Math.cos(angle)*Math.tan(angle)*mHeight);
         }
         return retval;
@@ -330,7 +330,7 @@ class DrawOnTop extends View implements SensorEventListener {
             // X * Tan(mHorizontalAngle) = mWidth
             mRadiusX=(mWidth/2)/(float)Math.tan(mHorizontalAngle/2);
             mRadiusY=(mHeight/2)/(float)Math.tan(mVerticalAngle/2);
-            hoursPointsDisplay= new float[(int)(mWidth*2/mDefinition)+2];
+            hoursPointsDisplay= new float[(int)(mWidth*3/mDefinition)];
 //            Log.d(mTAG, "Horizontal Radius: " + mRadiusX);
 //            Log.d(mTAG, "Vertical Radius: " + mRadiusY);
             super.onSizeChanged(w, h, oldw, oldh);
@@ -338,6 +338,7 @@ class DrawOnTop extends View implements SensorEventListener {
 
 	@Override
         protected void onDraw(Canvas canvas) {
+            // TODO: for more economy, see : postDelayed(this, DELAY);
             float omega=0;
             int x=0,i=0;
             float delta_y;
@@ -403,13 +404,13 @@ class DrawOnTop extends View implements SensorEventListener {
                 // Draw sun Path
                 // canvas.drawLines(hours_points_display,paint);
                 // Display just necessary :
-                for (i=0; i <= mWidth/mDefinition; i+=1)
+                for (i=0; i < (mWidth*3/mDefinition-4); i+=2)
                 {
                     x=(i*mDefinition)-(mWidth/2);
                     omega=getHourAngle(x);
                     // hoursPointsDisplay[i*2]=getX(omega); // TODO : should be works.
-                    hoursPointsDisplay[i*2]=x;//translateX(getPsi(omega)-mDirection);
-                    hoursPointsDisplay[i*2+1]=getY(omega);
+                    hoursPointsDisplay[i]=x;//translateX(getPsi(omega)-mDirection);
+                    hoursPointsDisplay[i+1]=getY(omega);
                 }
                 canvas.drawLines(hoursPointsDisplay,paint);
                 paint.setTextSize(12);
