@@ -469,7 +469,7 @@ class DrawOnTop extends View implements SensorEventListener {
                                     getX(omega)+3,
                                     getY(omega),
                                     paint);
-                            canvas.drawText(String.format("%.2f",omega), getX(omega)+15, getY(omega)-15, paint);
+                            canvas.drawText(String.format("%.2f",Math.toDegrees(omega)), getX(omega)+15, getY(omega)-15, paint);
                         }
                     }
                 }
@@ -480,13 +480,13 @@ class DrawOnTop extends View implements SensorEventListener {
                 paint.setStyle(Paint.Style.FILL);
                 paint.setShadowLayer(2,0,0,Color.BLACK);
                 int shift=20;
-                canvas.drawText("Direction: " + String.format("%.2f",mDirection), 10, mHeight - shift, paint);
+                canvas.drawText("Direction: " + String.format("%.2f",Math.toDegrees(mDirection)), 10, mHeight - shift, paint);
                 shift+=20;
-                canvas.drawText("Current Sun direction: " + String.format("%.2f",currentSunDirection), 10, mHeight - shift, paint);
+                canvas.drawText("Current Sun direction: " + String.format("%.2f",Math.toDegrees(currentSunDirection)), 10, mHeight - shift, paint);
                 shift+=20;
-                canvas.drawText("Current Sunset direction: " + String.format("%.2f",Math.PI-mOmegaS), 10, mHeight - shift, paint);
+                canvas.drawText("Current Sunset direction: " + String.format("%.2f",Math.toDegrees(Math.PI-mOmegaS)), 10, mHeight - shift, paint);
                 shift+=20;
-                canvas.drawText("Current Sunrise direction: " + String.format("%.2f",Math.PI+mOmegaS), 10, mHeight - shift, paint);
+                canvas.drawText("Current Sunrise direction: " + String.format("%.2f",Math.toDegrees(Math.PI+mOmegaS)), 10, mHeight - shift, paint);
 //                canvas.drawText("Sunrise angle: " + (float)(sunrise_points[0]-mDirection), 10, 20, paint);
 //                canvas.drawText("Sunset angle: " + (float)(sunset_points[0]-mDirection), 10, 40, paint);
 //                canvas.drawText("Sunrise shift: " + (float)(translateX(sunrise_points[0]-mDirection)), 10, 60, paint);

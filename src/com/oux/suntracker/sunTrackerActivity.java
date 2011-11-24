@@ -54,6 +54,18 @@ public class sunTrackerActivity extends Activity {
     private int mYear;
     private int mMonth;
     private int mDay;
+    // the callback received when the user "sets" the date in the dialog
+    private DatePickerDialog.OnDateSetListener mDateSetListener =
+        new DatePickerDialog.OnDateSetListener() {
+
+            public void onDateSet(DatePicker view, int year, 
+                    int monthOfYear, int dayOfMonth) {
+                date = Calendar.getInstance();
+                date.set(year,monthOfYear,dayOfMonth,0,0,0);
+                mDraw.changeDate(date);
+                mDraw.setWillNotDraw(false);
+            }
+        };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -141,19 +153,6 @@ public class sunTrackerActivity extends Activity {
             // menu.add(0, DISP_FAVS_ID, 0, "Favs");
             return true;
         }
-
-    // the callback received when the user "sets" the date in the dialog
-    private DatePickerDialog.OnDateSetListener mDateSetListener =
-        new DatePickerDialog.OnDateSetListener() {
-
-            public void onDateSet(DatePicker view, int year, 
-                    int monthOfYear, int dayOfMonth) {
-                date = Calendar.getInstance();
-                date.set(year,monthOfYear,dayOfMonth,0,0,0);
-                mDraw.changeDate(date);
-                mDraw.setWillNotDraw(false);
-            }
-        };
 
     @Override
         protected Dialog onCreateDialog(int id) {
