@@ -1,4 +1,4 @@
-package com.oux.suntracker;
+package com.oux.suntracker.presentation;
 
 import android.graphics.Canvas;
 import android.graphics.RectF;
@@ -19,7 +19,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.text.SimpleDateFormat;
 
-class DrawOnTop extends View implements SensorEventListener {
+public class DrawOnTop extends View implements SensorEventListener {
     private static final String mTAG = "Sun Tracker View";
     private float   mLastValues[] = new float[3*2];
     private final int matrix_size = 16;
@@ -95,7 +95,7 @@ class DrawOnTop extends View implements SensorEventListener {
         sunset_points[1]=(float)Math.PI-mOmegaS_summerSolstice;
 	}
 
-    public void setViewAngles(float horizontalAngle, float verticalAngle) {
+    public void setViewAngles(float verticalAngle, float horizontalAngle) {
         mHorizontalAngle=(float)Math.toRadians(horizontalAngle);
         mVerticalAngle=(float)Math.toRadians(verticalAngle);
     }

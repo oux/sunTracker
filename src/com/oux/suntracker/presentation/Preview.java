@@ -1,4 +1,4 @@
-package com.oux.suntracker;
+package com.oux.suntracker.presentation;
 
 import android.hardware.Camera;
 import android.view.SurfaceView;
@@ -12,7 +12,7 @@ import android.util.Log;
 import java.io.IOException;
 
 // @SuppressWarnings("deprecation")
-class Preview extends SurfaceView implements SurfaceHolder.Callback {
+public class Preview extends SurfaceView implements SurfaceHolder.Callback {
     private static final String TAG = "Sun Tracker Preview";
 
     SurfaceHolder mHolder;
@@ -20,7 +20,7 @@ class Preview extends SurfaceView implements SurfaceHolder.Callback {
     List<Size> mSupportedPreviewSizes;
     Camera mCamera;
 
-    Preview(Context context) {
+    public Preview(Context context) {
         super(context);
 
         // Install a SurfaceHolder.Callback so we get notified when the

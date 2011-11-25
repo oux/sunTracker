@@ -32,7 +32,9 @@ import android.os.Bundle;
 import android.graphics.PixelFormat;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.ViewGroup.LayoutParams; 
+import android.view.ViewGroup.LayoutParams;
+import com.oux.suntracker.presentation.Preview;
+import com.oux.suntracker.presentation.DrawOnTop;
 
 import java.io.IOException;
 import java.util.Calendar;
