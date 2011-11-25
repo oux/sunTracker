@@ -480,6 +480,10 @@ public class DrawOnTop extends View implements SensorEventListener {
                 paint.setStyle(Paint.Style.FILL);
                 paint.setShadowLayer(2,0,0,Color.BLACK);
                 int shift=20;
+                canvas.drawText("Rolling: " + String.format("%.2f",Math.toDegrees(mRolling)), 10, mHeight - shift, paint);
+                shift+=20;
+                canvas.drawText("Inclination: " + String.format("%.2f",Math.toDegrees(mInclination)), 10, mHeight - shift, paint);
+                shift+=20;
                 canvas.drawText("Direction: " + String.format("%.2f",Math.toDegrees(mDirection)), 10, mHeight - shift, paint);
                 shift+=20;
                 canvas.drawText("Current Sun direction: " + String.format("%.2f",Math.toDegrees(currentSunDirection)), 10, mHeight - shift, paint);
