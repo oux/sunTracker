@@ -54,7 +54,7 @@ public class DrawOnTop extends View implements SensorEventListener {
     Sun sunWinterSolstice;
     Calendar dateSummerSolstice;
     Calendar dateWinterSolstice;
-    int summerSolsticeDay=177;
+    int summerSolsticeDay=172;
     int winterSolsticeDay=355;
     float[] hours_points = new float[graduation*4];
     Sun[] sun_points = new Sun[graduation];
@@ -144,7 +144,7 @@ public class DrawOnTop extends View implements SensorEventListener {
 
     // Date dependence
     private float getDelta(int day) {
-        return (float)Math.toRadians((float)23.45 * FloatMath.sin ((float)((day - 81) * 2*(float)Math.PI / 365)));
+        return (float)Math.toRadians((float)23.45) * FloatMath.sin ((float)((day - 81) * 2*(float)Math.PI / 365));
     }
 
     // Alfa = Altitude (y)
@@ -222,11 +222,11 @@ public class DrawOnTop extends View implements SensorEventListener {
     }
 
     private float getX(Sun sun) {
-        return translateX(sun.mPsi-mDirection);
+        return translateX(sun.mAzimuth-mDirection);
     }
 
     private float getY(Sun sun) {
-        return -translateY(sun.mAlfa+mInclination);
+        return -translateY(sun.mAltitude+mInclination);
     }
 
     public void changeDate() {
@@ -411,18 +411,17 @@ public class DrawOnTop extends View implements SensorEventListener {
                 paint.setColor(Color.YELLOW);
                 paint.setStyle(Paint.Style.FILL);
                 canvas.drawCircle(getX(currentSun), getY(currentSun), 20, paint);
-                canvas.drawText(radianToHour(currentSun.mPsi),getX(currentSun)+20, getY(currentSun)-20, paint);
+                canvas.drawText(radianToHour(currentSun.mAzimuth),getX(currentSun)+20, getY(currentSun)-20, paint);
 
                 // Draw targeted sun position
                 targetedSun=new Sun(Calendar.getInstance());
-                targetedSun.setPsi(mDirection);
+                targetedSun.computeFromAzimuth(mDirection);
                 paint.setColor(Color.GREEN);
                 paint.setStrokeWidth(3);
                 paint.setStyle(Paint.Style.STROKE);
-        // BAD ! must compute psi
-                canvas.drawCircle(0, getY(targetedSun.mAlfa), 20, paint);
+                canvas.drawCircle(0, getY(targetedSun.mAltitude), 20, paint);
                 paint.setColor(Color.RED);
-                canvas.drawCircle(getX(targetedSun.mPsi)+5, getY(targetedSun.mAlfa), 20, paint);
+                canvas.drawCircle(getX(targetedSun.mAzimuth)+5, getY(targetedSun.mAltitude), 20, paint);
 
                 // Draw sun Path
                 // canvas.drawLines(hours_points_display,paint);
@@ -508,7 +507,7 @@ public class DrawOnTop extends View implements SensorEventListener {
                     "Direction: " + String.format("%.2f",Math.toDegrees(mDirection))+ "("+String.format("%.2f",mDirection)+")",
                     "Current Sunset direction: " + String.format("%.2f",Math.toDegrees(Math.PI-mOmegaS)),
                     "Current Sunrise direction: " + String.format("%.2f",Math.toDegrees(Math.PI+mOmegaS)),
-                    "Targeted sun azimuth: " + targetedSun.mPsi,
+                    "Targeted sun azimuth: " + targetedSun.mAzimuth,
                 };
                 for(i = 0; i < infos.length; i++)
                 {
