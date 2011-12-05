@@ -54,7 +54,7 @@ public class DrawOnTop extends View implements SensorEventListener {
     Sun sunWinterSolstice;
     Calendar dateSummerSolstice;
     Calendar dateWinterSolstice;
-    int summerSolsticeDay=172;
+    int summerSolsticeDay=174;
     int winterSolsticeDay=355;
     float[] hours_points = new float[graduation*4];
     Sun[] sun_points = new Sun[graduation];
