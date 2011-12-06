@@ -45,12 +45,12 @@ public class Sun {
         // http://itacanet.org/eng/elec/solar/sun3.pdf
         alfa=-2*((float)Math.atan(
                     (Math.sin(mLatitude)+Math.sqrt(
-                                                   -(Math.pow(Math.sin(mDeclination),2)
+                                                   -Math.pow(Math.sin(mDeclination),2)
                                                        +Math.pow(Math.cos(mLatitude),2)*Math.pow(Math.cos(psi),2)
                                                        +Math.pow(Math.sin(mLatitude),2)
                                                     )
                                                   )/(Math.sin(mDeclination)+Math.cos(mLatitude)*Math.cos(psi))
-                    )));
+                    ));
         if (alfa > 0) {
             alfa=alfa-(float)Math.PI;
         } else {
