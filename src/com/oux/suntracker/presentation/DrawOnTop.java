@@ -507,7 +507,8 @@ public class DrawOnTop extends View implements SensorEventListener {
                     "Direction: " + String.format("%.2f",Math.toDegrees(mDirection))+ "("+String.format("%.2f",mDirection)+")",
                     "Current Sunset direction: " + String.format("%.2f",Math.toDegrees(Math.PI-mOmegaS)),
                     "Current Sunrise direction: " + String.format("%.2f",Math.toDegrees(Math.PI+mOmegaS)),
-                    "Targeted sun azimuth: " + targetedSun.mAzimuth,
+                    "Targeted sun azimuth: " + String.format("%.2f",Math.toDegrees(targetedSun.mAzimuth)) + "X:" + getX(targetedSun.mAzimuth),
+                    "Targeted sun altitude: " + String.format("%.2f",Math.toDegrees(targetedSun.mAltitude)) + "Y:" + getY(targetedSun.mAltitude),
                 };
                 for(i = 0; i < infos.length; i++)
                 {
