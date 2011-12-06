@@ -22,12 +22,7 @@ import com.oux.suntracker.models.Sun;
 
 public class DrawOnTop extends View implements SensorEventListener {
     private static final String mTAG = "Sun Tracker View";
-    private float   mLastValues[] = new float[3*2];
-    private final int matrix_size = 16;
-    private float   mOrientationValues[] = new float[3];
     private int     mColors[] = new int[3*2];
-    private Path    mPath = new Path();
-    private RectF   mRect = new RectF();
     private float   mLastX;
     private float   mScale[] = new float[2];
     private float   mYOffset;
@@ -38,29 +33,21 @@ public class DrawOnTop extends View implements SensorEventListener {
     private Bitmap  mBitmap;
     private int   mWidth;
     private int   mHeight;
-    int mDayNumber;
     // http://engnet.anu.edu.au/DEpeople/Andres.Cuevas/Sun/help/SPguide.html
     float mRadiusX=200,mRadiusY=200;
     float mHorizontalAngle=1,mVerticalAngle=1;
-    float mFi;
-    float mOmegaS_winterSolstice;
-    float mOmegaS_summerSolstice;
-    float mDelta, deltaWinterSolstice, deltaSummerSolstice;
-    float mOmegaS;
     /* Show different hours: */
     int graduation=24*4;
     int mDefinition=5;
     Sun sunSummerSolstice;
     Sun sunWinterSolstice;
+    Calendar mTargetedDate;
     Calendar dateSummerSolstice;
     Calendar dateWinterSolstice;
     int summerSolsticeDay=174;
     int winterSolsticeDay=355;
-    float[] hours_points = new float[graduation*4];
     Sun[] sun_points = new Sun[graduation];
-    float[] omega_points = new float[graduation];
     float[] hoursPointsDisplay = new float[mWidth*3];;
-    float[] hours_points_display = new float[graduation*4*3];
     public static volatile float new_mDirection = (float) 0;
     public static volatile float mDirection = (float) 0;
     public static volatile float mRolling = (float) 0;
@@ -95,8 +82,6 @@ public class DrawOnTop extends View implements SensorEventListener {
         mColors[5] = Color.argb(192, 255, 255, 64);
 
         mPaint.setFlags(Paint.ANTI_ALIAS_FLAG);
-        mRect.set(-0.5f, -0.5f, 0.5f, 0.5f);
-        mPath.arcTo(mRect, 0, 180);
         changeDate();
 
         dateWinterSolstice = Calendar.getInstance();
@@ -113,10 +98,10 @@ public class DrawOnTop extends View implements SensorEventListener {
     }
 
     // Get hours angle from pixel X
-    private float getHourAngle(int i) {
+    private float getAzimuthFromX(int i) {
         float angle;
         //if (i < mWidth/2) {
-            angle=(float)Math.atan(i/mRadiusX)+mDirection;
+            angle=(float)(Math.atan(i/mRadiusX)-Math.PI)+mDirection;
             /*
         } else {
             angle=(float)Math.PI+(float)Math.atan(i/mRadiusX)-mDirection;
@@ -127,105 +112,58 @@ public class DrawOnTop extends View implements SensorEventListener {
 
     // Get hours:minutes from Radian angle
     private float hourToRadian(Calendar date) {
-        return (float)(2*Math.PI*date.get(Calendar.HOUR_OF_DAY)/24)+(float)(2*Math.PI*date.get(Calendar.MINUTE)/(24*60));
+        return (float)(2*Math.PI*date.get(Calendar.HOUR_OF_DAY)/24)+(float)(2*Math.PI*date.get(Calendar.MINUTE)/(24*60))-(float)Math.PI;
     }
 
     // Get hours:minutes from Radian angle
     private String radianToHour(float angle) {
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
-        Date date = new Date(24*(long)Math.toDegrees(Math.PI-angle)*10*1000);
+        Date date = new Date(24*(long)Math.toDegrees(angle)*10*1000);
         return sdf.format(date);
     }
 
-    // Geolocation dependence
-    private float getFi() {
-        return (float)Math.toRadians(43.49); //TODO: to dynamise
-    }
-
-    // Date dependence
-    private float getDelta(int day) {
-        return (float)Math.toRadians((float)23.45) * FloatMath.sin ((float)((day - 81) * 2*(float)Math.PI / 365));
-    }
-
-    // Alfa = Altitude (y)
-    private float getAlfa(float delta, float omega) {
-        return (float)Math.asin(FloatMath.sin((float)delta) * FloatMath.sin(mFi) + FloatMath.cos((float)delta) * FloatMath.cos(mFi) * FloatMath.cos((float)omega));
-    }
-
-    // Psi = azimuth (x)
-    private float getPsi(float delta, float omega) {
-        float alfa;
-        float psi;
-        psi = 0;
-        alfa = getAlfa(delta,omega);
-        if (omega < Math.PI) {
-            // TODO: remove 2PI shift here and on mDirection compute if possible
-            psi = (float)Math.PI -(float)Math.acos(
-                    (FloatMath.cos(mFi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(mFi) * FloatMath.cos((float)omega)
-                    ) / FloatMath.cos (alfa)
-                    );
-        } else {
-            psi = (float)Math.PI +(float)Math.acos(
-                    (FloatMath.cos(mFi) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(mFi) * FloatMath.cos((float)omega)
-                    ) / FloatMath.cos (alfa)
-                    );
-        }
-        return psi;
-    }
-
-    private float translateX(double angle) {
-        float retval=1000;
+    private int translateX(double angle) {
+        int retval=1000;
         // return (float)(Math.tan(angle));
         if (angle < 0 && angle < -mHorizontalAngle) {
             retval=-mWidth;
         } else if (angle > 0 && angle > mHorizontalAngle ) {
             retval=mWidth;
         } else if ((angle > 0 && angle < mHorizontalAngle) || (angle < 0 && angle > -mHorizontalAngle)) {
-            retval=(float)(Math.tan(angle)*mRadiusX);
+            retval=(int)(Math.tan(angle)*mRadiusX);
             // retval=(float)(Math.cos(angle)*Math.tan(angle)*mWidth);
         }
         return retval;
         // return (float)(Math.tan(angle)*mRadiusX);
     }
 
-    private float translateY(double angle) {
-        float retval=1000;
+    private int translateY(double angle) {
+        int retval=1000;
         if (angle < 0 && angle < -mVerticalAngle) {
             retval=-mHeight;
         } else if (angle > 0 && angle > mVerticalAngle ) {
             retval=mHeight;
         } else if ((angle > 0 && angle < mVerticalAngle) || (angle < 0 && angle > -mVerticalAngle)) {
-            retval=(float)(Math.tan(angle)*mRadiusY);
+            retval=(int)(Math.tan(angle)*mRadiusY);
             // retval=(float)(Math.cos(angle)*Math.tan(angle)*mHeight);
         }
         return retval;
         // return (float)(Math.tan(angle)*mRadiusY);
     }
 
-    // TODO: Debug bijection between getX and getHourAngle (Xradius problem)
-    private float getX(int dayOfYear, float omega) {
-        float  delta=getDelta(dayOfYear);
-        return translateX(getPsi(delta,omega)-mDirection);
+    private int getX(float azimuth) {
+        return translateX(azimuth+(float)Math.PI-mDirection);
     }
 
-    private float getY(int dayOfYear, float omega) {
-        float delta=getDelta(dayOfYear);
-        return -translateY(getAlfa(delta,omega)+mInclination);
+    private int getY(float altitude) {
+        return -translateY(altitude+mInclination);
     }
 
-    private float getX(float omega) {
-        return translateX(getPsi(mDelta,omega)-mDirection);
+    private int getX(Sun sun) {
+        return translateX(sun.mAzimuth+Math.PI-mDirection);
     }
 
-    private float getY(float omega) {
-        return -translateY(getAlfa(mDelta,omega)+mInclination);
-    }
-
-    private float getX(Sun sun) {
-        return translateX(sun.mAzimuth-mDirection);
-    }
-
-    private float getY(Sun sun) {
+    private int getY(Sun sun) {
         return -translateY(sun.mAltitude+mInclination);
     }
 
@@ -235,50 +173,10 @@ public class DrawOnTop extends View implements SensorEventListener {
     }
 
     public void changeDate(Calendar date) {
-        float omega;
-        float alfa;
-        float psi;
+        mTargetedDate = date;
         // Initialisation regarding the localisation.
-        mDayNumber = date.get(Calendar.DAY_OF_YEAR);
         // http://engnet.anu.edu.au/DEpeople/Andres.Cuevas/Sun/help/SPguide.html
-        mDelta = getDelta(mDayNumber);
-        mFi=getFi();
-        mOmegaS = (float)Math.acos(-((float)Math.tan(mFi) * (float)Math.tan(mDelta)));
-        for (int hour=0; hour < graduation; hour++)
-        {
-            omega= (float)( (Math.PI * 2 * hour / graduation) - Math.PI);
-            // omega= (float)( (Math.PI * 2 * hour / graduation) + Math.PI);
-            psi = getPsi(mDelta,omega);
-            alfa = getAlfa(mDelta,omega);
-            // TODO: getAlfaPsi(omega, alfa, psi);
-            sun_points[hour]=new Sun(date,omega);
-            if (hour == 0){
-                omega_points[hour]=omega;
-                hours_points[hour*4]=psi;
-                hours_points[hour*4+1]=alfa;
-            } else if (hour == graduation - 1) {
-                hours_points[hour*4-2]=psi;
-                hours_points[hour*4-1]=alfa;
-            } else {
-                omega_points[hour]=omega;
-                hours_points[hour*4-2]=psi;
-                hours_points[hour*4-1]=alfa;
-                hours_points[hour*4]=psi;
-                hours_points[hour*4+1]=alfa;
-            }
-            // Log.v(mTAG,"hours_points["+hour*4+"]="+hours_points[hour*4]+","+hours_points[hour+1]);
-        }
     }
-
-    /*
-    private null drawLineWithCheck() {
-        float retval=mHeight;
-        if (angle < mVerticalAngle)
-            retval=(float)(Math.cos(angle)*Math.tan(angle)*mHeight);
-        return retval;
-        // return (float)(Math.tan(angle)*mRadiusY);
-    }
-    */
 
     public void onSensorChanged(SensorEvent event) {
         synchronized (this) {
@@ -360,14 +258,12 @@ public class DrawOnTop extends View implements SensorEventListener {
 	@Override
         protected void onDraw(Canvas canvas) {
             // TODO: for more economy, see : postDelayed(this, DELAY);
-            float omega=0;
             int x=0,i=0;
-            float delta_y;
-            float alfa, pointed_alfa=0;
-            float psi, pointed_psi=0;
             Calendar date=Calendar.getInstance();;
             Sun currentSun;
             Sun targetedSun;
+            // TODO: make the choise:
+            // Paint paint = mPaint;
             Paint paint = new Paint();
             if (mBitmap != null) {
                 canvas.save(Canvas.MATRIX_SAVE_FLAG);
@@ -390,6 +286,7 @@ public class DrawOnTop extends View implements SensorEventListener {
                  */
                 paint.setColor(0xFFFFFF00);
                 paint.setStrokeWidth(3);
+                // TODO : Use getX and getY
                 canvas.drawLine(
                         translateX(sunWinterSolstice.mSunRise-mDirection),
                         -translateY(mInclination),
@@ -400,12 +297,6 @@ public class DrawOnTop extends View implements SensorEventListener {
                         -translateY(mInclination),
                         translateX(sunSummerSolstice.mSunSet-mDirection),
                         -translateY(mInclination),paint);
-
-                for (int hour=0; hour < graduation*4; hour+=2)
-                {
-                    hours_points_display[hour]=translateX(hours_points[hour]-mDirection);
-                    hours_points_display[hour+1]=-translateY(hours_points[hour+1]+mInclination);
-                }
                 // Draw current sun position
                 currentSun=new Sun(Calendar.getInstance(),hourToRadian(date));
                 paint.setColor(Color.YELLOW);
@@ -414,46 +305,39 @@ public class DrawOnTop extends View implements SensorEventListener {
                 canvas.drawText(radianToHour(currentSun.mAzimuth),getX(currentSun)+20, getY(currentSun)-20, paint);
 
                 // Draw targeted sun position
-                targetedSun=new Sun(Calendar.getInstance());
-                targetedSun.computeFromAzimuth(mDirection);
+                targetedSun=new Sun(mTargetedDate);
+                // mDirection=PI on south => sun azimuth=0 on south
+                targetedSun.computeFromAzimuth(mDirection-(float)Math.PI);
                 paint.setColor(Color.GREEN);
                 paint.setStrokeWidth(3);
                 paint.setStyle(Paint.Style.STROKE);
                 canvas.drawCircle(0, getY(targetedSun), 20, paint);
-                paint.setColor(Color.RED);
-                canvas.drawCircle(getX(targetedSun)+5, getY(targetedSun), 20, paint);
+                // Should be the same:
+                // canvas.drawCircle(getX(targetedSun), getY(targetedSun), 20, paint);
 
                 // Draw sun Path
-                // canvas.drawLines(hours_points_display,paint);
                 // Display just necessary :
                 for (i=0; i < (mWidth*3/mDefinition-4); i+=2)
                 {
                     x=(i*mDefinition)-(mWidth/2);
-                    omega=getHourAngle(x);
-                    hoursPointsDisplay[i]=getX(omega); // TODO : should be works.
-                    // hoursPointsDisplay[i]=x;//translateX(getPsi(omega)-mDirection);
-                    hoursPointsDisplay[i+1]=getY(omega);
+                    Sun sun = new Sun(mTargetedDate);
+                    sun.computeFromAzimuth(getAzimuthFromX(x));
+                    hoursPointsDisplay[i]=x;
+                    hoursPointsDisplay[i+1]=getY(sun);
                 }
                 canvas.drawLines(hoursPointsDisplay,paint);
-                paint.setTextSize(12);
-                paint.setColor(Color.WHITE);
-                paint.setStyle(Paint.Style.FILL);
-                paint.setShadowLayer(2,0,0,Color.BLACK);
-                canvas.drawText(String.format("%.2f",getPsi(mDelta,getHourAngle(-(mWidth/2)))), 20, getY(getHourAngle(0)), paint);
-                canvas.drawText(String.format("%.2f",getHourAngle(-(mWidth/2))),     20, getY(getHourAngle(0))+20, paint);
-                canvas.drawText(String.format("%.2f",getPsi(mDelta,getHourAngle(0))), 20, getY(getHourAngle(0))+40, paint);
-                canvas.drawText(String.format("%.2f",getHourAngle(0)),               20, getY(getHourAngle(0))+60, paint);
-                canvas.drawText(String.format("%.2f",getPsi(mDelta,getHourAngle((mWidth/2)))), 20, getY(getHourAngle(0))+80, paint);
-                canvas.drawText(String.format("%.2f",getHourAngle((mWidth/2))),      20, getY(getHourAngle(0))+100, paint);
+                canvas.drawLine(translateX(targetedSun.mSunRise-mDirection), -mHeight,
+                        translateX(targetedSun.mSunRise-mDirection), mHeight, paint);
+                canvas.drawLine(translateX(targetedSun.mSunSet-mDirection), -mHeight,
+                        translateX(targetedSun.mSunSet-mDirection), mHeight, paint);
                 paint.setColor(0xFFFF0000);
-        // BAD ! must compute psi
                 canvas.drawLine(translateX(currentSun.mSunRise-mDirection), -mHeight,
                         translateX(currentSun.mSunRise-mDirection), mHeight, paint);
                 paint.setColor(0xFF0000FF);
-        // BAD ! must compute psi
                 canvas.drawLine(translateX(currentSun.mSunSet-mDirection), -mHeight,
                         translateX(currentSun.mSunSet-mDirection), mHeight, paint);
                 /* Show different seasons: */
+                        /*
                 for (int day=1; day < 365 ; day=day+30)
                 {
                     int color=0;
@@ -472,9 +356,6 @@ public class DrawOnTop extends View implements SensorEventListener {
                         // TODO:A regarder pourquoi les saisons sont inversees
                         alfa = getAlfa(delta_y, omega);
                         psi  = getPsi(delta_y, omega);
-                        /*
-                        ********* Print seasons ********
-                        */
                         paint.setColor(color);
                         canvas.drawPoint(
                             translateX(psi-mDirection)-3,
@@ -495,7 +376,7 @@ public class DrawOnTop extends View implements SensorEventListener {
                         }
                     }
                 }
-// canvas.drawText("mDelta: "+ mDelta, 10, hours_points[pointed_hour*4+1]+20, paint);
+                */
                 canvas.restore();
                 paint.setTextSize(12);
                 paint.setColor(Color.WHITE);
@@ -505,10 +386,10 @@ public class DrawOnTop extends View implements SensorEventListener {
                     "Rolling: " + String.format("%.2f",Math.toDegrees(mRolling))+"(" + String.format("%.2f",mRolling)+")",
                     "Inclination: " + String.format("%.2f",Math.toDegrees(mInclination)),
                     "Direction: " + String.format("%.2f",Math.toDegrees(mDirection))+ "("+String.format("%.2f",mDirection)+")",
-                    "Current Sunset direction: " + String.format("%.2f",Math.toDegrees(Math.PI-mOmegaS)),
-                    "Current Sunrise direction: " + String.format("%.2f",Math.toDegrees(Math.PI+mOmegaS)),
-                    "Targeted sun azimuth: " + String.format("%.2f",Math.toDegrees(targetedSun.mAzimuth)) + "X:" + getX(targetedSun.mAzimuth),
-                    "Targeted sun altitude: " + String.format("%.2f",Math.toDegrees(targetedSun.mAltitude)) + "Y:" + getY(targetedSun.mAltitude),
+                    "Current Sunset direction: " + String.format("%.2f",Math.toDegrees(currentSun.mSunSet)),
+                    "Current Sunrise direction: " + String.format("%.2f",Math.toDegrees(currentSun.mSunRise)),
+                    "Targeted sun azimuth: " + String.format("%.2f",Math.toDegrees(targetedSun.mAzimuth)) + ", X:" + getX(targetedSun.mAzimuth),
+                    "Targeted sun altitude: " + String.format("%.2f",Math.toDegrees(targetedSun.mAltitude)) + ", Y:" + getY(targetedSun.mAltitude),
                 };
                 for(i = 0; i < infos.length; i++)
                 {
