@@ -419,9 +419,9 @@ public class DrawOnTop extends View implements SensorEventListener {
                 paint.setColor(Color.GREEN);
                 paint.setStrokeWidth(3);
                 paint.setStyle(Paint.Style.STROKE);
-                canvas.drawCircle(0, getY(targetedSun.mAltitude), 20, paint);
+                canvas.drawCircle(0, getY(targetedSun), 20, paint);
                 paint.setColor(Color.RED);
-                canvas.drawCircle(getX(targetedSun.mAzimuth)+5, getY(targetedSun.mAltitude), 20, paint);
+                canvas.drawCircle(getX(targetedSun)+5, getY(targetedSun), 20, paint);
 
                 // Draw sun Path
                 // canvas.drawLines(hours_points_display,paint);
