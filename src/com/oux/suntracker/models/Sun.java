@@ -1,6 +1,5 @@
 package com.oux.suntracker.models;
 
-import android.util.FloatMath;
 import java.util.Calendar;
 
 public class Sun {
@@ -43,7 +42,7 @@ public class Sun {
         //TODO: To check
         // http://www.stjarnhimlen.se/comp/riset.html#1
         // http://itacanet.org/eng/elec/solar/sun3.pdf
-        alfa=-2*((float)Math.atan(
+        alfa = -2*((float)Math.atan(
                     (Math.sin(mLatitude)+Math.sqrt(
                                                    -Math.pow(Math.sin(mDeclination),2)
                                                        +Math.pow(Math.cos(mLatitude),2)*Math.pow(Math.cos(psi),2)
@@ -52,23 +51,19 @@ public class Sun {
                                                   )/(Math.sin(mDeclination)+Math.cos(mLatitude)*Math.cos(psi))
                     ));
         if (alfa > 0) {
-            alfa=alfa-(float)Math.PI;
+            alfa = alfa-(float)Math.PI;
         } else {
-            alfa=alfa+(float)Math.PI;
+            alfa = alfa+(float)Math.PI;
         }
         return alfa;
     }
 
     private void computeData() {
-        mLatitude=getLatitude();
+        mLatitude = getLatitude();
         mDeclination = getDeclination(mDayOfYear);
         mOmegaS = (float)Math.acos(-((float)Math.tan(mLatitude) * (float)Math.tan(mDeclination)));
-        //mSunRise = getAzimuth(mDeclination,(float)Math.PI+mOmegaS,getAltitude(mDeclination,(float)Math.PI+mOmegaS));
-        //mSunSet = getAzimuth(mDeclination,(float)Math.PI-mOmegaS,getAltitude(mDeclination,(float)Math.PI-mOmegaS));
-        mSunRise = (float)Math.PI+getAzimuth(mDeclination,mOmegaS,getAltitude(mDeclination,mOmegaS));
-        mSunSet = (float)Math.PI-getAzimuth(mDeclination,mOmegaS,getAltitude(mDeclination,mOmegaS));
-        //mSunRise = (float)Math.PI+mOmegaS;
-        //mSunSet = (float)Math.PI-mOmegaS;
+        mSunRise = -getAzimuth(mDeclination,mOmegaS,getAltitude(mDeclination,mOmegaS));
+        mSunSet = -mSunRise;
     }
 
     // Geolocation dependence
@@ -78,32 +73,37 @@ public class Sun {
 
     // Delta = Declination : Date dependence
     private float getDeclination(int day) {
-        return (float)Math.toRadians(23.45) * FloatMath.sin ((float)((day - 81) * 2*(float)Math.PI / 365));
+        return (float)Math.toRadians(23.45) * (float)Math.sin(((day - 81) * 2 * (float)Math.PI / 365.25));
     }
 
     // Alfa = Altitude (y)
     private float getAltitude(float delta, float omega) {
-        return (float)Math.asin(FloatMath.sin((float)delta) * FloatMath.sin(mLatitude) + FloatMath.cos((float)delta) * FloatMath.cos(mLatitude) * FloatMath.cos((float)omega));
+        return (float)Math.asin(Math.sin(delta) * Math.sin(mLatitude) + Math.cos(delta) * Math.cos(mLatitude) * Math.cos(omega));
     }
 
     // Psi = Azimuth (x)
     private float getAzimuth(float delta, float omega,float alfa) {
         float psi;
         psi = 0;
-        if (omega < Math.PI) {
+        if (omega < 0) {
             // TODO: remove 2PI shift here and on mDirection compute if possible
-            psi = (float)Math.PI -(float)Math.acos(
-                    (FloatMath.cos(mLatitude) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(mLatitude) * FloatMath.cos((float)omega)
-                    ) / FloatMath.cos (alfa)
+            psi = -((float)Math.PI - (float)Math.acos(
+                    (Math.cos(mLatitude) * Math.sin(delta) - Math.cos(delta) * Math.sin(mLatitude) * Math.cos(omega)
+                    ) / Math.cos (alfa)
+                    ));
+        } else if (omega < Math.PI) {
+            // TODO: remove 2PI shift here and on mDirection compute if possible
+            psi = (float)Math.PI - (float)Math.acos(
+                    (Math.cos(mLatitude) * Math.sin(delta) - Math.cos(delta) * Math.sin(mLatitude) * Math.cos(omega)
+                    ) / Math.cos (alfa)
                     );
         } else {
-            psi = (float)Math.PI +(float)Math.acos(
-                    (FloatMath.cos(mLatitude) * FloatMath.sin(delta) - FloatMath.cos(delta) * FloatMath.sin(mLatitude) * FloatMath.cos((float)omega)
-                    ) / FloatMath.cos (alfa)
+            psi = (float)Math.PI + (float)Math.acos(
+                    (Math.cos(mLatitude) * Math.sin(delta) - Math.cos(delta) * Math.sin(mLatitude) * Math.cos(omega)
+                    ) / Math.cos (alfa)
                     );
         }
         return psi;
     }
-
 }
 // vim:et:
