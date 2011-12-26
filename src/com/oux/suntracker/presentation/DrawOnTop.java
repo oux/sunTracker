@@ -16,6 +16,8 @@ import android.hardware.SensorManager;
 import android.hardware.Sensor;
 import android.util.Log;
 
+import java.util.Locale;
+import java.util.TimeZone;
 import java.util.Calendar;
 import java.util.Date;
 import java.text.SimpleDateFormat;
@@ -34,6 +36,8 @@ public class DrawOnTop extends View implements SensorEventListener {
     private Bitmap  mBitmap;
     private int   mWidth;
     private int   mHeight;
+    private int   mBottom;
+    private int   mLeft;
     // http://engnet.anu.edu.au/DEpeople/Andres.Cuevas/Sun/help/SPguide.html
     float mRadiusX=200,mRadiusY=200;
     float mHorizontalAngle=1,mVerticalAngle=1;
@@ -42,13 +46,16 @@ public class DrawOnTop extends View implements SensorEventListener {
     int mDefinition=5;
     Sun sunSummerSolstice;
     Sun sunWinterSolstice;
-    Calendar mTargetedDate;
+    Calendar mTargetedSunTime;
     Calendar dateSummerSolstice;
     Calendar dateWinterSolstice;
+    TimeZone mLocal;
     int summerSolsticeDay=174;
     int winterSolsticeDay=355;
     Sun[] sun_points = new Sun[graduation];
     float[] hoursPointsDisplay = new float[mWidth*3];;
+    private static SimpleDateFormat sdfUTC = new SimpleDateFormat("HH:mm");
+    private static SimpleDateFormat sdfLocal = new SimpleDateFormat("HH:mm");
     public static volatile float new_mDirection = (float) 0;
     public static volatile float mDirection = (float) 0;
     public static volatile float mRolling = (float) 0;
@@ -83,6 +90,9 @@ public class DrawOnTop extends View implements SensorEventListener {
         mColors[4] = Color.argb(192, 128, 64, 128);
         mColors[5] = Color.argb(192, 255, 255, 64);
 
+        // sdfLocal.setTimeZone(TimeZone.getTimeZone("GMT+01"));
+        sdfUTC.setTimeZone(TimeZone.getTimeZone("UTC"));
+
         mPaint.setFlags(Paint.ANTI_ALIAS_FLAG);
         changeDate();
 
@@ -104,10 +114,10 @@ public class DrawOnTop extends View implements SensorEventListener {
     }
 
     // Get hours angle from pixel X
-    private float getAzimuthFromX(int i) {
-        float angle;
+    private double getAzimuthFromX(int i) {
+        double angle;
         //if (i < mWidth/2) {
-            angle=(float)(Math.atan(i/mRadiusX)-Math.PI)+mDirection;
+            angle=(Math.atan(i/mRadiusX)-Math.PI)+mDirection;
             /*
         } else {
             angle=(float)Math.PI+(float)Math.atan(i/mRadiusX)-mDirection;
@@ -117,15 +127,14 @@ public class DrawOnTop extends View implements SensorEventListener {
     }
 
     // Get hours:minutes from Radian angle
-    private float hourToRadian(Calendar date) {
-        return (float)(2*Math.PI*date.get(Calendar.HOUR_OF_DAY)/24)+(float)(2*Math.PI*date.get(Calendar.MINUTE)/(24*60))-(float)Math.PI;
+    private double hourToRadian(Calendar date) {
+        return (2*Math.PI*date.get(Calendar.HOUR_OF_DAY)/24)+(2*Math.PI*date.get(Calendar.MINUTE)/(24*60))-Math.PI;
     }
 
     // Get hours:minutes from Radian angle
-    private String radianToHour(float angle) {
-        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
+    private String radianToLocalHour(double angle) {
         Date date = new Date(24*(long)Math.toDegrees(angle-Math.PI)*10*1000);
-        return sdf.format(date);
+        return sdfLocal.format(date);
     }
 
     private int translateX(double angle) {
@@ -135,7 +144,7 @@ public class DrawOnTop extends View implements SensorEventListener {
             retval=-mWidth;
         } else if (angle > 0 && angle > mHorizontalAngle ) {
             retval=mWidth;
-        } else if ((angle > 0 && angle < mHorizontalAngle) || (angle < 0 && angle > -mHorizontalAngle)) {
+        } else if ((angle >= 0 && angle < mHorizontalAngle) || (angle <= 0 && angle > -mHorizontalAngle)) {
             retval=(int)(Math.tan(angle)*mRadiusX);
             // retval=(float)(Math.cos(angle)*Math.tan(angle)*mWidth);
         }
@@ -149,7 +158,7 @@ public class DrawOnTop extends View implements SensorEventListener {
             retval = -mHeight;
         } else if (angle > 0 && angle > mVerticalAngle ) {
             retval = mHeight;
-        } else if ((angle > 0 && angle < mVerticalAngle) || (angle < 0 && angle > -mVerticalAngle)) {
+        } else if ((angle >= 0 && angle < mVerticalAngle) || (angle <= 0 && angle > -mVerticalAngle)) {
             retval = (int)(Math.tan(angle)*mRadiusY);
             // retval=(float)(Math.cos(angle)*Math.tan(angle)*mHeight);
         }
@@ -157,11 +166,11 @@ public class DrawOnTop extends View implements SensorEventListener {
         // return (float)(Math.tan(angle)*mRadiusY);
     }
 
-    private int getX(float azimuth) {
+    private int getX(double azimuth) {
         return translateX(azimuth+Math.PI-mDirection);
     }
 
-    private int getY(float altitude) {
+    private int getY(double altitude) {
         return -translateY(altitude+mInclination);
     }
 
@@ -179,7 +188,9 @@ public class DrawOnTop extends View implements SensorEventListener {
     }
 
     public void changeDate(Calendar date) {
-        mTargetedDate = date;
+        mLocal = TimeZone.getDefault();
+        mTargetedSunTime = (Calendar) date.clone();
+        mTargetedSunTime.setTimeZone(TimeZone.getTimeZone("UTC"));
         // Initialisation regarding the localisation.
         // http://engnet.anu.edu.au/DEpeople/Andres.Cuevas/Sun/help/SPguide.html
     }
@@ -222,8 +233,12 @@ public class DrawOnTop extends View implements SensorEventListener {
                         }
                         mInclination = (float) ((orientation[1] * kFilteringFactor) +
                                 (mInclination * (1.0 - kFilteringFactor)));
-                        mRolling = (float) ((orientation[2] * kFilteringFactor) +
-                                (mRolling * (1.0 - kFilteringFactor)));
+                        if (orientation[2] > Math.PI/2 && mRolling < -Math.PI/2 || orientation[2] < -Math.PI/2 && mRolling > Math.PI/2) {
+                            mRolling = orientation[2];
+                        } else {
+                            mRolling = (float) ((orientation[2] * kFilteringFactor) +
+                                    (mRolling * (1.0 - kFilteringFactor)));
+                        }
                     }
                 }
                 invalidate();
@@ -265,7 +280,8 @@ public class DrawOnTop extends View implements SensorEventListener {
         protected void onDraw(Canvas canvas) {
             // TODO: for more economy, see : postDelayed(this, DELAY);
             int x = 0, i = 0;
-            Calendar date=Calendar.getInstance();;
+            Calendar date=Calendar.getInstance();
+            date.setTimeZone(TimeZone.getTimeZone("UTC"));
             Sun currentSun;
             Sun targetedSun;
             // TODO: make the choise:
@@ -307,18 +323,29 @@ public class DrawOnTop extends View implements SensorEventListener {
                 currentSun = new Sun(date,hourToRadian(date));
                 paint.setColor(Color.YELLOW);
                 paint.setStyle(Paint.Style.FILL);
+                paint.setShadowLayer(2,0,0,Color.BLACK);
                 canvas.drawCircle(getX(currentSun), getY(currentSun), 20, paint);
-                canvas.drawText(radianToHour(currentSun.mAzimuth),getX(currentSun)+20, getY(currentSun)-20, paint);
+                canvas.drawText(radianToLocalHour(currentSun.mAzimuth),getX(currentSun)+20, getY(currentSun)-20, paint);
+                for (i=0; i < (mWidth*3/mDefinition-4); i+=2)
+                {
+                    x = (i*mDefinition)-(mWidth/2);
+                    Sun sun = new Sun(date);
+                    sun.computeFromAzimuth(getAzimuthFromX(x));
+                    hoursPointsDisplay[i] = x;
+                    hoursPointsDisplay[i+1] = getY(sun);
+                }
+                canvas.drawLines(hoursPointsDisplay,paint);
 
                 // Draw targeted sun position
-                targetedSun = new Sun(mTargetedDate);
+                targetedSun = new Sun(mTargetedSunTime);
                 // mDirection=PI on south => sun azimuth=0 on south
-                targetedSun.computeFromAzimuth(mDirection - (float)Math.PI);
+                targetedSun.computeFromAzimuth(mDirection - Math.PI);
                 // Should be the same:
-                paint.setColor(Color.RED);
-                canvas.drawCircle(getX(targetedSun), getY(targetedSun), 20, paint);
-                canvas.drawText(radianToHour(targetedSun.mAzimuth),getX(targetedSun)+20, getY(targetedSun)+20, paint);
+                // paint.setColor(Color.RED);
+                // canvas.drawCircle(getX(targetedSun), getY(targetedSun), 20, paint);
+                // canvas.drawText(radianToLocalHour(targetedSun.mAzimuth),getX(targetedSun)+20, getY(targetedSun)+20, paint);
                 paint.setColor(Color.GREEN);
+                canvas.drawText(radianToLocalHour(targetedSun.mAzimuth), 20, getY(targetedSun)+20, paint);
                 paint.setStrokeWidth(3);
                 paint.setStyle(Paint.Style.STROKE);
                 canvas.drawCircle(0, getY(targetedSun), 20, paint);
@@ -328,7 +355,7 @@ public class DrawOnTop extends View implements SensorEventListener {
                 for (i=0; i < (mWidth*3/mDefinition-4); i+=2)
                 {
                     x = (i*mDefinition)-(mWidth/2);
-                    Sun sun = new Sun(mTargetedDate);
+                    Sun sun = new Sun(mTargetedSunTime);
                     sun.computeFromAzimuth(getAzimuthFromX(x));
                     hoursPointsDisplay[i] = x;
                     hoursPointsDisplay[i+1] = getY(sun);
@@ -386,23 +413,43 @@ public class DrawOnTop extends View implements SensorEventListener {
                 }
                 */
                 canvas.restore();
+                String[] infos = {
+                    "Sun TZ: " + mTargetedSunTime.getTimeZone().getDisplayName(),
+                    "Locale Time: "+ sdfLocal.format(mTargetedSunTime.getTime()),
+                    "Sun Time: " + sdfUTC.format(mTargetedSunTime.getTime()),
+                    "Rolling: " + String.format("%3.0f",Math.toDegrees(mRolling))+"(" + String.format("%1.2f",mRolling)+")",
+                    "Inclination: " + String.format("%3.0f",Math.toDegrees(mInclination))+"(" + String.format("%1.2f",mInclination)+")",
+                    "Direction: " + String.format("%3.0f",Math.toDegrees(mDirection))+ "("+String.format("%1.2f",mDirection)+")",
+                    "Targeted Azimuth: " + String.format("%3.0f",Math.toDegrees(getAzimuthFromX(0)))+ "(" + String.format("%1.2f",getAzimuthFromX(0))+")",
+                    "Targeted sun azimuth: " + String.format("%3.0f",Math.toDegrees(targetedSun.mAzimuth)) + ", X:" + getX(targetedSun.mAzimuth),
+                    "Targeted sun altitude: " + String.format("%3.0f",Math.toDegrees(targetedSun.mAltitude)) + ", Y:" + getY(targetedSun.mAltitude),
+                };
+                mBottom = mHeight;
+                mLeft = 0;
+                if (mRolling < -3*Math.PI/4 || mRolling > 3*Math.PI/4) {
+                    canvas.save(Canvas.MATRIX_SAVE_FLAG);
+                    canvas.rotate(90);
+                    canvas.translate(0,-mWidth);
+                    mBottom = mWidth;
+                } else if (mRolling > Math.PI/4) {
+                    canvas.save(Canvas.MATRIX_SAVE_FLAG);
+                    canvas.rotate(-180);
+                    canvas.translate(-mWidth,-mHeight);
+                } else if (mRolling > -Math.PI/4) {
+                    canvas.save(Canvas.MATRIX_SAVE_FLAG);
+                    canvas.rotate(-90);
+                    canvas.translate(-mHeight,0);
+                    mBottom = mWidth;
+                }
                 paint.setTextSize(12);
                 paint.setColor(Color.WHITE);
                 paint.setStyle(Paint.Style.FILL);
                 paint.setShadowLayer(2,0,0,Color.BLACK);
-                String[] infos = {
-                    "Rolling: " + String.format("%.2f",Math.toDegrees(mRolling))+"(" + String.format("%.2f",mRolling)+")",
-                    "Inclination: " + String.format("%.2f",Math.toDegrees(mInclination)),
-                    "Direction: " + String.format("%.2f",Math.toDegrees(mDirection))+ "("+String.format("%.2f",mDirection)+")",
-                    "Targeted sun azimuth: " + String.format("%.2f",Math.toDegrees(targetedSun.mAzimuth)) + ", X:" + getX(targetedSun.mAzimuth),
-                    "Targeted sun altitude: " + String.format("%.2f",Math.toDegrees(targetedSun.mAltitude)) + ", Y:" + getY(targetedSun.mAltitude),
-                    "Vertical Angle: " + String.format("%.2f",Math.toDegrees(mVerticalAngle)),
-                    "Horizontal Angle: " + String.format("%.2f",Math.toDegrees(mHorizontalAngle)),
-                };
                 for(i = 0; i < infos.length; i++)
                 {
-                    canvas.drawText(infos[i], 10, mHeight - 20*(i+1), paint);
+                    canvas.drawText(infos[i], mLeft + 10, mBottom - 20*(i+1), paint);
                 }
+                canvas.restore();
             }
             super.onDraw(canvas);
         }
