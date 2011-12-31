@@ -228,18 +228,35 @@ public class DrawOnTop extends View implements SensorEventListener {
                             // to avoid big slide on -PI to + PI transition:
                             mDirection = new_mDirection;
                         } else {
-                            mDirection = (float) ((new_mDirection * (kFilteringFactor/(Math.PI-(new_mDirection-mDirection)))) +
-                                    (mDirection * (1.0 - (kFilteringFactor/(Math.PI-(new_mDirection-mDirection))))));
+                            if (Math.abs(new_mDirection - mDirection) > 6*Math.PI/180)
+                            {
+                                mDirection = (float) ((new_mDirection * kFilteringFactor) +
+                                        (mDirection * (1.0 - kFilteringFactor)));
+                            }
+                            else
+                            {
+                                if (Math.abs(new_mDirection - mDirection) > 2*Math.PI/180)
+                                {
+                                    mDirection = (float) ((new_mDirection * (kFilteringFactor/(Math.PI-Math.abs(new_mDirection-mDirection)))) +
+                                            (mDirection * (1.0 - (kFilteringFactor/(Math.PI-Math.abs(new_mDirection-mDirection))))));
+                                }
+                            }
                         }
 
-                        mInclination = (float) ((orientation[1] * kFilteringFactor) +
-                                (mInclination * (1.0 - kFilteringFactor)));
+                        if (Math.abs(mInclination - orientation[1]) > 2*Math.PI/180)
+                        {
+                            mInclination = (float) ((orientation[1] * kFilteringFactor) +
+                                    (mInclination * (1.0 - kFilteringFactor)));
+                        }
 
                         if (orientation[2] > Math.PI/2 && mRolling < -Math.PI/2 || orientation[2] < -Math.PI/2 && mRolling > Math.PI/2) {
                             mRolling = orientation[2];
                         } else {
-                            mRolling = (float) ((orientation[2] * kFilteringFactor) +
-                                    (mRolling * (1.0 - kFilteringFactor)));
+                            if (Math.abs(mRolling - orientation[2]) > 2*Math.PI/180)
+                            {
+                                mRolling = (float) ((orientation[2] * kFilteringFactor) +
+                                        (mRolling * (1.0 - kFilteringFactor)));
+                            }
                         }
                     }
                 }
