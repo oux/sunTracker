@@ -289,7 +289,7 @@ public class DrawOnTop extends View implements SensorEventListener {
             // X * Tan(mHorizontalAngle) = mWidth
             mRadiusX = (mWidth/2)/(float)Math.tan(mHorizontalAngle/2);
             mRadiusY = (mHeight/2)/(float)Math.tan(mVerticalAngle/2);
-            hoursPointsDisplay = new float[(int)(mWidth*3/mDefinition)];
+            hoursPointsDisplay = new float[(int)(mWidth*5/mDefinition)];
 //            Log.d(mTAG, "Horizontal Radius: " + mRadiusX);
 //            Log.d(mTAG, "Vertical Radius: " + mRadiusY);
             super.onSizeChanged(w, h, oldw, oldh);
@@ -299,6 +299,7 @@ public class DrawOnTop extends View implements SensorEventListener {
         protected void onDraw(Canvas canvas) {
             // TODO: for more economy, see : postDelayed(this, DELAY);
             int x = 0, i = 0;
+            Sun sun;
             Calendar date=Calendar.getInstance();
             date.setTimeZone(TimeZone.getTimeZone("UTC"));
             Sun currentSun;
@@ -345,13 +346,23 @@ public class DrawOnTop extends View implements SensorEventListener {
                 paint.setShadowLayer(2,0,0,Color.BLACK);
                 canvas.drawCircle(getX(currentSun), getY(currentSun), 20, paint);
                 canvas.drawText(radianToLocalHour(currentSun.mAzimuth),getX(currentSun)+20, getY(currentSun)-20, paint);
-                for (i=0; i < (mWidth*3/mDefinition-4); i+=2)
+                sun = new Sun(date);
+                for (i=0; i < (mWidth/mDefinition); i++)
                 {
                     x = (i*mDefinition)-(mWidth/2);
-                    Sun sun = new Sun(date);
                     sun.computeFromAzimuth(getAzimuthFromX(x));
-                    hoursPointsDisplay[i] = x;
-                    hoursPointsDisplay[i+1] = getY(sun);
+                    if (i == 0){
+                        hoursPointsDisplay[i*4]=x;
+                        hoursPointsDisplay[i*4+1]=getY(sun);
+                    } else if (i == (mWidth/mDefinition) - 1) {
+                        hoursPointsDisplay[i*4-2]=x;
+                        hoursPointsDisplay[i*4-1]=getY(sun);
+                    } else {
+                        hoursPointsDisplay[i*4-2]=x;
+                        hoursPointsDisplay[i*4-1]=getY(sun);
+                        hoursPointsDisplay[i*4]=x;
+                        hoursPointsDisplay[i*4+1]=getY(sun);
+                    }
                 }
                 canvas.drawLines(hoursPointsDisplay,paint);
 
@@ -371,13 +382,23 @@ public class DrawOnTop extends View implements SensorEventListener {
 
                 // Draw sun Path
                 // Display just necessary :
-                for (i=0; i < (mWidth*3/mDefinition-4); i+=2)
+                sun = new Sun(mTargetedSunTime);
+                for (i=0; i < (mWidth/mDefinition); i++)
                 {
                     x = (i*mDefinition)-(mWidth/2);
-                    Sun sun = new Sun(mTargetedSunTime);
                     sun.computeFromAzimuth(getAzimuthFromX(x));
-                    hoursPointsDisplay[i] = x;
-                    hoursPointsDisplay[i+1] = getY(sun);
+                    if (i == 0){
+                        hoursPointsDisplay[i*4]=x;
+                        hoursPointsDisplay[i*4+1]=getY(sun);
+                    } else if (i == (mWidth/mDefinition) - 1) {
+                        hoursPointsDisplay[i*4-2]=x;
+                        hoursPointsDisplay[i*4-1]=getY(sun);
+                    } else {
+                        hoursPointsDisplay[i*4-2]=x;
+                        hoursPointsDisplay[i*4-1]=getY(sun);
+                        hoursPointsDisplay[i*4]=x;
+                        hoursPointsDisplay[i*4+1]=getY(sun);
+                    }
                 }
                 canvas.drawLines(hoursPointsDisplay,paint);
                 canvas.drawLine(getX(targetedSun.mSunRise), -mHeight,
