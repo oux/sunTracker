@@ -289,7 +289,7 @@ public class DrawOnTop extends View implements SensorEventListener {
             // X * Tan(mHorizontalAngle) = mWidth
             mRadiusX = (mWidth/2)/(float)Math.tan(mHorizontalAngle/2);
             mRadiusY = (mHeight/2)/(float)Math.tan(mVerticalAngle/2);
-            hoursPointsDisplay = new float[(int)(mWidth*5/mDefinition)];
+            hoursPointsDisplay = new float[(int)(mWidth*8/mDefinition)];
 //            Log.d(mTAG, "Horizontal Radius: " + mRadiusX);
 //            Log.d(mTAG, "Vertical Radius: " + mRadiusY);
             super.onSizeChanged(w, h, oldw, oldh);
@@ -351,14 +351,14 @@ public class DrawOnTop extends View implements SensorEventListener {
                     canvas.drawText(radianToLocalHour(currentSun.mAzimuth), getX(currentSun)-50, getY(currentSun)-20, paint);
                 }
                 sun = new Sun(date);
-                for (i=0; i < (mWidth/mDefinition); i++)
+                for (i=0; i < (mWidth*2/mDefinition); i++)
                 {
-                    x = (i*mDefinition)-(mWidth/2);
+                    x = (i*mDefinition)-mWidth;
                     sun.computeFromAzimuth(getAzimuthFromX(x));
                     if (i == 0){
                         hoursPointsDisplay[i*4]=x;
                         hoursPointsDisplay[i*4+1]=getY(sun);
-                    } else if (i == (mWidth/mDefinition) - 1) {
+                    } else if (i == (mWidth*2/mDefinition) - 1) {
                         hoursPointsDisplay[i*4-2]=x;
                         hoursPointsDisplay[i*4-1]=getY(sun);
                     } else {
@@ -391,14 +391,14 @@ public class DrawOnTop extends View implements SensorEventListener {
                 // Draw sun Path
                 // Display just necessary :
                 sun = new Sun(mTargetedSunTime);
-                for (i=0; i < (mWidth/mDefinition); i++)
+                for (i=0; i < (mWidth*2/mDefinition); i++)
                 {
-                    x = (i*mDefinition)-(mWidth/2);
+                    x = (i*mDefinition)-mWidth;
                     sun.computeFromAzimuth(getAzimuthFromX(x));
                     if (i == 0){
                         hoursPointsDisplay[i*4]=x;
                         hoursPointsDisplay[i*4+1]=getY(sun);
-                    } else if (i == (mWidth/mDefinition) - 1) {
+                    } else if (i == (mWidth*2/mDefinition) - 1) {
                         hoursPointsDisplay[i*4-2]=x;
                         hoursPointsDisplay[i*4-1]=getY(sun);
                     } else {
