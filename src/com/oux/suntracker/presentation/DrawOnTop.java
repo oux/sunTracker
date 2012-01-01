@@ -345,7 +345,11 @@ public class DrawOnTop extends View implements SensorEventListener {
                 paint.setStyle(Paint.Style.FILL);
                 paint.setShadowLayer(2,0,0,Color.BLACK);
                 canvas.drawCircle(getX(currentSun), getY(currentSun), 20, paint);
-                canvas.drawText(radianToLocalHour(currentSun.mAzimuth),getX(currentSun)+20, getY(currentSun)-20, paint);
+                if (currentSun.mAzimuth > 0) {
+                    canvas.drawText(radianToLocalHour(currentSun.mAzimuth), getX(currentSun)+20, getY(currentSun)-20, paint);
+                } else {
+                    canvas.drawText(radianToLocalHour(currentSun.mAzimuth), getX(currentSun)-50, getY(currentSun)-20, paint);
+                }
                 sun = new Sun(date);
                 for (i=0; i < (mWidth/mDefinition); i++)
                 {
@@ -375,7 +379,11 @@ public class DrawOnTop extends View implements SensorEventListener {
                 // canvas.drawCircle(getX(targetedSun), getY(targetedSun), 20, paint);
                 // canvas.drawText(radianToLocalHour(targetedSun.mAzimuth),getX(targetedSun)+20, getY(targetedSun)+20, paint);
                 paint.setColor(Color.GREEN);
-                canvas.drawText(radianToLocalHour(targetedSun.mAzimuth), 20, getY(targetedSun)+20, paint);
+                if (targetedSun.mAzimuth > 0) {
+                    canvas.drawText(radianToLocalHour(targetedSun.mAzimuth), -50, getY(targetedSun)+20, paint);
+                } else {
+                    canvas.drawText(radianToLocalHour(targetedSun.mAzimuth), 20, getY(targetedSun)+20, paint);
+                }
                 paint.setStrokeWidth(3);
                 paint.setStyle(Paint.Style.STROKE);
                 canvas.drawCircle(0, getY(targetedSun), 20, paint);
